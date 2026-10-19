@@ -6,6 +6,7 @@ import ThemeSwitcher from './components/ThemeSwitcher';
 import Instructions from './components/Instructions';
 import SocialLinks from './components/SocialLinks';
 import AwwwardsBadge from './components/AwwwardsBadge';
+import TVScreen from './components/TVScreen';
 
 export default function App() {
   const [loadingPercent, setLoadingPercent] = useState(0);
@@ -23,6 +24,8 @@ export default function App() {
   const sceneControllerRef = useRef();
 
   useEffect(() => {
+    // StrictMode runs effects twice in dev; the scene owns global DOM/WebGL state, so init once.
+    if (sceneControllerRef.current) return;
     window.onbeforeunload = () => {
       window.scrollTo(0, 0);
     };
@@ -68,19 +71,7 @@ export default function App() {
         currentTime={timeMode}
       />
 
-      <div className="gsap-animation" id="gsapMovie">
-        <div className="movies-inner">
-          Music & acoustic guitar are
-          <br />
-          my creative outlet when
-          <br />
-          I step away from the terminal.
-        </div>
-      </div>
-
-      <div className="gsap-game-animation" id="gsapGame">
-        National Debater &amp; NYC MUN Delegate (13 Conferences)
-      </div>
+      <TVScreen />
 
       <ThemeSwitcher switchTime={handleSwitchTime} time={timeMode} />
 
