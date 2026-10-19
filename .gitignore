@@ -24,3 +24,4 @@ win_erased.png
 win_text_orig.png
 
 .vercel
+.env*
