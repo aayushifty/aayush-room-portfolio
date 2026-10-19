@@ -303,26 +303,6 @@ a {
   right:20px!important;
   z-index:1!important
 }
-.gsap-animation {
-  font-family:Roboto,sans-serif;
-  height:150px;
-  opacity:1;
-  overflow:hidden
-}
-.gsap-animation,.gsap-game-animation {
-  color:#fff;
-  font-size:15px;
-  text-align:center;
-  width:225px
-}
-.gsap-game-animation {
-  opacity:0;
-  text-shadow:4px 3px 0 #7a7a7a
-}
-.movies-inner {
-  font-family:Roboto,sans-serif;
-  transform:translateY(300%)
-}
 .test-container {
   height:100lvh;
   position:fixed;
@@ -647,4 +627,218 @@ a {
   transform:scale(.5)
 }
 
+}
+
+/* ---------- TV screen overlay (CSS3D, see Scene.js updateTvScreen) ---------- */
+.tv-screen-host {
+  height:0;
+  overflow:hidden;
+  position:absolute
+}
+.tv-screen {
+  --tv-accent:#ffb547;
+  --tv-red:#ff4d5e;
+  border-radius:6px;
+  color:#fff;
+  font-family:Roboto,sans-serif;
+  height:296px;
+  opacity:0;
+  overflow:hidden;
+  position:relative;
+  transition:opacity .35s ease,visibility 0s linear .35s;
+  visibility:hidden;
+  width:528px
+}
+.tv-screen.is-on {
+  opacity:1;
+  transition:opacity .35s ease;
+  visibility:visible
+}
+.tv-slide {
+  inset:0;
+  opacity:0;
+  position:absolute;
+  transition:opacity .45s ease,transform .45s ease,filter .45s ease
+}
+.tv-slide.is-active {
+  opacity:1
+}
+.tv-slide__progress {
+  background:linear-gradient(90deg,var(--tv-accent),var(--tv-red));
+  bottom:0;
+  height:4px;
+  left:0;
+  position:absolute;
+  transform:scaleX(var(--progress,0));
+  transform-origin:left;
+  width:100%
+}
+
+/* movie phase: full-screen title cards on the black TV */
+.tv-slide--movie {
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 40%,#16213f 0%,#0a0f1f 55%,#03050b 100%);
+  filter:blur(6px);
+  transform:scale(1.04)
+}
+.tv-slide--movie.is-active {
+  filter:none;
+  transform:none
+}
+.tv-slide__bar {
+  align-items:center;
+  color:rgba(255,255,255,.6);
+  display:flex;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13px;
+  justify-content:space-between;
+  left:30px;
+  letter-spacing:.18em;
+  position:absolute;
+  right:30px;
+  text-transform:uppercase;
+  top:16px
+}
+.tv-slide__live {
+  align-items:center;
+  display:inline-flex;
+  gap:8px
+}
+.tv-slide__live i {
+  animation:tv-blink 1.2s steps(2,start) infinite;
+  background:var(--tv-red);
+  border-radius:50%;
+  box-shadow:0 0 8px var(--tv-red);
+  display:inline-block;
+  height:8px;
+  width:8px
+}
+.tv-slide__center {
+  align-items:center;
+  display:flex;
+  flex-direction:column;
+  inset:44px 48px 24px;
+  justify-content:center;
+  position:absolute;
+  text-align:center
+}
+.tv-slide__icon {
+  color:var(--tv-accent);
+  filter:drop-shadow(0 0 10px rgba(255,181,71,.45));
+  height:40px;
+  margin-bottom:10px;
+  width:40px
+}
+.tv-slide__icon svg,.tv-hud__icon svg {
+  display:block;
+  height:100%;
+  width:100%
+}
+.tv-slide__title {
+  background:linear-gradient(90deg,#fff 0%,#ffe2b0 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  font-size:32px;
+  font-weight:700;
+  letter-spacing:-.01em;
+  line-height:1.1;
+  margin:0
+}
+.tv-slide__body {
+  color:rgba(255,255,255,.82);
+  font-size:18px;
+  line-height:1.4;
+  margin:12px 0 0;
+  max-width:400px;
+  text-wrap:balance
+}
+.tv-slide__meta {
+  color:var(--tv-accent);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:14px;
+  letter-spacing:.2em;
+  margin:12px 0 0;
+  text-transform:uppercase
+}
+
+/* game phase: HUD toast over the sky / airplane background */
+.tv-slide--game {
+  transform:translateY(24px)
+}
+.tv-slide--game.is-active {
+  transform:none
+}
+.tv-slide--game .tv-slide__progress {
+  border-radius:2px;
+  bottom:30px;
+  left:50%;
+  margin-left:-160px;
+  width:320px
+}
+.tv-hud {
+  align-items:center;
+  background:rgba(8,12,28,.82);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:14px;
+  bottom:30px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:flex;
+  gap:16px;
+  left:50%;
+  margin-left:-160px;
+  padding:14px 20px 18px;
+  position:absolute;
+  width:320px
+}
+.tv-hud__icon {
+  align-items:center;
+  background:radial-gradient(circle at 30% 30%,#ffd98a,#ff9f1c);
+  border-radius:12px;
+  color:#3a2200;
+  display:flex;
+  flex:none;
+  height:52px;
+  justify-content:center;
+  padding:12px;
+  width:52px
+}
+.tv-hud__text {
+  display:flex;
+  flex-direction:column;
+  min-width:0
+}
+.tv-hud__kicker {
+  color:var(--tv-accent);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px;
+  letter-spacing:.2em;
+  text-transform:uppercase
+}
+.tv-hud__title {
+  font-size:22px;
+  font-weight:700;
+  line-height:1.2;
+  margin-top:2px
+}
+.tv-hud__meta {
+  color:rgba(255,255,255,.7);
+  font-size:14px;
+  margin-top:2px
+}
+@keyframes tv-blink {
+  to {
+    visibility:hidden
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .tv-slide,.tv-slide--movie,.tv-slide--game {
+    filter:none;
+    transform:none;
+    transition:opacity .2s linear
+  }
+  .tv-slide__live i {
+    animation:none
+  }
 }

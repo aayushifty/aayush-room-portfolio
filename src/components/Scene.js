@@ -132,46 +132,28 @@ export class AnimationManager {
   }
 
   setupAnimations() {
-    const gsapMovie = document.getElementById('gsapMovie');
-    if (gsapMovie) {
-      const movieObj = new CSS3DObject(gsapMovie);
-      movieObj.scale.setScalar(0.0057);
-      movieObj.rotation.y = -Math.PI / 2;
-      movieObj.position.set(1.7084245681762695, 1.175346851348877, -1.3662960529327393);
-      this.scene.add(movieObj);
-      this.tl.to(
-        '.movies-inner',
-        {
-          transform: 'translate(0%,-120%)',
-          duration: 0.08530713108
-        },
-        0.2606495646034361
-      );
-    }
+    // TV overlay: one CSS3D plane over the TV screen, slides driven by timeline progress.
+    // Rendered at 2x pixel size and half the world scale so text stays crisp.
+    const tvScreen = document.getElementById('tvScreen');
+    if (tvScreen) {
+      const tvObj = new CSS3DObject(tvScreen);
+      tvObj.scale.setScalar(0.0057 / 2);
+      tvObj.rotation.y = -Math.PI / 2;
+      tvObj.position.set(1.7084245681762695, 1.175346851348877, -1.3662960529327393);
+      this.scene.add(tvObj);
 
-    const gsapGame = document.getElementById('gsapGame');
-    if (gsapGame) {
-      const gameObj = new CSS3DObject(gsapGame);
-      gameObj.scale.setScalar(0.0057);
-      gameObj.rotation.y = -Math.PI / 2;
-      gameObj.position.set(1.7084245681762695, 0.95, -1.3662960529327393);
-      this.scene.add(gameObj);
-      this.tl.to(
-        '.gsap-game-animation',
-        {
-          opacity: 1,
-          duration: 0.01
-        },
-        0.37
-      );
-      this.tl.to(
-        '.gsap-game-animation',
-        {
-          opacity: 0,
-          duration: 0.05
-        },
-        0.5
-      );
+      this.tvScreen = tvScreen;
+      this.tvSlides = Array.from(tvScreen.querySelectorAll('.tv-slide')).map((el) => ({
+        el,
+        from: parseFloat(el.dataset.from),
+        to: parseFloat(el.dataset.to)
+      }));
+      this.tvWindow = {
+        from: Math.min(...this.tvSlides.map((s) => s.from)),
+        to: Math.max(...this.tvSlides.map((s) => s.to))
+      };
+      this.tvOn = false;
+      this.tvActive = -1;
     }
 
     if (this.gltf.animations) {
@@ -217,6 +199,27 @@ export class AnimationManager {
 
   updateMixers(delta) {
     this.mixers.forEach((mixer) => mixer.update(delta));
+  }
+
+  updateTvScreen() {
+    if (!this.tvScreen) return;
+    const p = this.tl.progress();
+    const on = p >= this.tvWindow.from && p < this.tvWindow.to;
+    if (on !== this.tvOn) {
+      this.tvScreen.classList.toggle('is-on', on);
+      this.tvOn = on;
+    }
+    if (!on) return;
+
+    const active = this.tvSlides.findIndex((s) => p >= s.from && p < s.to);
+    if (active !== this.tvActive) {
+      this.tvSlides.forEach((s, i) => s.el.classList.toggle('is-active', i === active));
+      this.tvActive = active;
+    }
+    if (active !== -1) {
+      const s = this.tvSlides[active];
+      s.el.style.setProperty('--progress', ((p - s.from) / (s.to - s.from)).toFixed(3));
+    }
   }
 }
 
@@ -730,7 +733,10 @@ export function createSceneController() {
       }
 
       const delta = clock.getDelta();
-      if (animManager) animManager.updateMixers(delta);
+      if (animManager) {
+        animManager.updateMixers(delta);
+        animManager.updateTvScreen();
+      }
 
       // Scroll loop (seamless infinite journey)
       if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
