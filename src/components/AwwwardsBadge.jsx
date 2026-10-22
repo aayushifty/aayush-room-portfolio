@@ -2,7 +2,22 @@ import React from 'react';
 
 export default function AwwwardsBadge() {
   return (
-    <div id="awwwards" style={{ position: 'fixed', zIndex: 2, transform: 'translateY(-50%)', top: '50lvh', left: 0 }}>
+    <div
+      id="awwwards"
+      style={{
+        position: 'fixed',
+        zIndex: 2,
+        transform: 'translateY(-50%)',
+        top: '50lvh',
+        left: 0,
+        borderTopRightRadius: '12px',
+        borderBottomRightRadius: '12px',
+        overflow: 'hidden',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 245, 212, 0.25)',
+        border: '1px solid rgba(0, 245, 212, 0.3)',
+        borderLeft: 'none'
+      }}
+    >
       <a id="awwwards-link" href="https://www.awwwards.com/sites/immersive-scroll-portfolio" target="_blank" rel="noreferrer">
         <svg width="53.08" height="171.358">
           <path className="js-color-bg" fill="white" d="M0 0h53.08v171.358H0z" />

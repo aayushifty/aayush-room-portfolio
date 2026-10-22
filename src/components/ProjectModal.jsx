@@ -35,19 +35,16 @@ export default function ProjectModal({ id, showModal, closeModal, currentTime })
   return (
     <div className="project-modal-backdrop">
       <article
-        className="project-modal"
+        className={`project-modal ${theme === 'day' ? 'theme-day' : 'theme-night'}`}
         itemScope
         itemType="http://schema.org/Article"
-        style={{
-          backgroundColor: theme === 'day' ? 'rgba(255, 255, 255, 0.692)' : 'rgba(0, 0, 0, 0.692)'
-        }}
       >
         <div className="project-content">
           <header className="header">
             <h1
               className="title"
               itemProp="headline"
-              style={{ color: theme === 'day' ? '#000' : '#fff' }}
+              style={{ color: theme === 'day' ? '#0f172a' : '#f8fafc' }}
             >
               {project.title}
             </h1>
@@ -62,6 +59,14 @@ export default function ProjectModal({ id, showModal, closeModal, currentTime })
 
           <div className="side-content">
             <div className="project-video-container">
+              <div className="browser-mockup-header">
+                <div className="browser-dot red" />
+                <div className="browser-dot yellow" />
+                <div className="browser-dot green" />
+                <div className="browser-url-bar">
+                  {project.url ? project.url.replace(/^https?:\/\//, '') : 'aayushifty.is-a.dev'}
+                </div>
+              </div>
               <div className="play-button-container" ref={playBtnRef}>
                 <img
                   src={assetsPaths.playIcon}
@@ -101,7 +106,7 @@ export default function ProjectModal({ id, showModal, closeModal, currentTime })
           <div
             className="description"
             itemProp="description"
-            style={{ color: theme === 'day' ? '#000' : '#fff' }}
+            style={{ color: theme === 'day' ? '#475569' : '#94a3b8' }}
           >
             {project.description}
           </div>

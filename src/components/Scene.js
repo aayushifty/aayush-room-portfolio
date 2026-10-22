@@ -258,7 +258,8 @@ export function createSceneController() {
 
       scene.environment = dayEnvTexture;
       if (scene.environmentRotation) scene.environmentRotation.set(0, 2, 0);
-      scene.background = new THREE.Color(0xdce7f3);
+      scene.background = new THREE.Color(0xebf2f8);
+      if (scene.fog) scene.fog.color.set(0xebf2f8);
       const dirL = scene.getObjectByName('mainDirLight');
       if (dirL) dirL.intensity = 2.2;
 
@@ -342,7 +343,7 @@ export function createSceneController() {
         if (obj) {
           if (item.name === 'SofaMesh') {
             obj.material.map = null;
-            obj.material.color = new THREE.Color(0x3f376c);
+            obj.material.color = new THREE.Color(0x182030);
           } else {
             obj.material.map = item.night;
           }
@@ -352,7 +353,8 @@ export function createSceneController() {
 
       scene.environment = nightEnvTexture;
       if (scene.environmentRotation) scene.environmentRotation.set(0, 0, 0);
-      scene.background = new THREE.Color(0x060914);
+      scene.background = new THREE.Color(0x05070c);
+      if (scene.fog) scene.fog.color.set(0x05070c);
       const dirL = scene.getObjectByName('mainDirLight');
       if (dirL) dirL.intensity = 0.3;
 
@@ -453,7 +455,7 @@ export function createSceneController() {
     initialTimeMode
   }) {
     scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xd9d9d9, 10, 60);
+    scene.fog = new THREE.Fog(0xebf2f8, 10, 60);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.set(0, 2, 0);
@@ -494,7 +496,7 @@ export function createSceneController() {
     cssRenderer.domElement.style.zIndex = '0';
     document.body.appendChild(cssRenderer.domElement);
 
-    scene.background = new THREE.Color(0xdce7f3);
+    scene.background = new THREE.Color(0xebf2f8);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
@@ -599,9 +601,9 @@ export function createSceneController() {
     scene.add(starsGroup);
 
     const starGeo = new THREE.SphereGeometry(0.03, 2, 2);
-    const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const starPalette = [0xffffff, 0x00f5d4, 0xffffff, 0x38bdf8, 0xa78bfa];
     for (let i = 0; i < starXs.length; i++) {
-      const star = new THREE.Mesh(starGeo, starMat);
+      const star = new THREE.Mesh(starGeo, new THREE.MeshBasicMaterial({ color: starPalette[i % starPalette.length] }));
       star.position.set(starXs[i], starYs[i], -50);
       starsGroup.add(star);
     }

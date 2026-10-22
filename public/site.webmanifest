@@ -1,11 +1,13 @@
 {
-  "name": "Aayush Bhatta — AI Developer & Robotics",
-  "short_name": "Aayush",
+  "name": "Aayush Bhatta (@aayushifty) — AI Developer & Robotics",
+  "short_name": "aayushifty",
+  "description": "Aayush Bhatta's 3D Interactive AI Developer & Robotics Portfolio",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#05070c",
+  "theme_color": "#00f5d4",
   "icons": [
     { "src": "./meta/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "./meta/avatar-square.png", "sizes": "512x512", "type": "image/png" }
-  ],
-  "theme_color": "#000000",
-  "background_color": "#000000",
-  "display": "standalone"
+  ]
 }
