@@ -5,7 +5,6 @@ import ProjectModal from './components/ProjectModal';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import Instructions from './components/Instructions';
 import SocialLinks from './components/SocialLinks';
-import AwwwardsBadge from './components/AwwwardsBadge';
 import TVScreen from './components/TVScreen';
 
 export default function App() {
@@ -80,8 +79,6 @@ export default function App() {
       <Instructions />
 
       <SocialLinks />
-
-      <AwwwardsBadge />
     </div>
   );
 }

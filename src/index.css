@@ -44,12 +44,17 @@
 }
 
 html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
   color-scheme: dark light;
 }
 
 body {
   margin: 0;
-  overflow: hidden;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: hidden; /* Initial state, unlocked upon Enter or scroll */
   font-family: var(--font-sans);
   background-color: var(--bg-obsidian-deep);
   color: var(--text-night-main);
@@ -70,9 +75,6 @@ code {
 
 .App {
   text-align: center;
-  position: relative;
-  width: 100vw;
-  height: 100vh;
 }
 
 /* ==========================================================================
@@ -169,6 +171,7 @@ code {
   border: 1.5px solid rgba(0, 245, 212, 0.6);
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 245, 212, 0.3), inset 0 0 15px rgba(0, 245, 212, 0.1);
   transition: all 0.35s var(--ease-spring);
+  z-index: 12;
 }
 
 .start-button:hover {
@@ -437,7 +440,7 @@ code {
 }
 
 /* ==========================================================================
-   3D CANVAS & CONTAINERS
+   3D CANVAS & PROXY SCROLL CONTAINER
    ========================================================================== */
 
 .canvas {
@@ -449,11 +452,16 @@ code {
   min-height: -webkit-fill-available;
   outline: none;
   z-index: -1;
+  pointer-events: none;
 }
 
 #proxy-container {
+  position: relative;
+  width: 100%;
   height: 1500vh;
+  min-height: 1500vh;
   z-index: 2;
+  pointer-events: auto;
 }
 
 .test-container {
@@ -465,25 +473,6 @@ code {
 a {
   display: none;
   text-decoration: none;
-}
-
-#awwwards-link {
-  display: block !important;
-}
-
-#awwwards {
-  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.5));
-  transition: transform 0.3s var(--ease-spring), filter 0.3s ease;
-}
-
-#awwwards:hover {
-  filter: drop-shadow(0 15px 30px rgba(0, 245, 212, 0.35));
-}
-
-@media (max-width: 600px) {
-  #awwwards {
-    transform: translateY(-50%) scale(0.6) translateX(-30%) !important;
-  }
 }
 
 /* VR Button */
@@ -978,7 +967,6 @@ a {
 
 /* ==========================================================================
    TV SCREEN OVERLAY (CSS3D Sequencer in Scene.js)
-   Preserved and Elevated with Cyber Aesthetics
    ========================================================================== */
 
 .tv-screen-host {

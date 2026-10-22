@@ -43,20 +43,34 @@ export default function LoadingScreen({ percentage, loading }) {
   }, [percentage, loading]);
 
   const handleEnter = () => {
-    if (!loading && loadingDivRef.current) {
+    if (loadingDivRef.current) {
+      // Immediately unlock body and html scrollbars so there is zero latency
+      document.body.style.overflow = 'auto';
+      document.body.style.overflowY = 'auto';
+      document.body.style.overflowX = 'hidden';
+      document.documentElement.style.overflow = 'auto';
+      document.documentElement.style.overflowY = 'auto';
+      document.documentElement.style.overflowX = 'hidden';
+
+      const proxy = document.getElementById('proxy-container');
+      if (proxy) {
+        proxy.style.display = 'block';
+        proxy.style.height = '1500vh';
+      }
+
       gsap.to(loadingDivRef.current, {
         yPercent: 100,
         opacity: 0,
-        duration: 1.5,
+        duration: 1.2,
         ease: 'power2.out',
         onComplete: () => {
           if (loadingDivRef.current) loadingDivRef.current.style.display = 'none';
-          const proxy = document.getElementById('proxy-container');
-          if (proxy) proxy.style.display = 'block';
           setHidden(true);
-          document.body.style.overflow = 'auto';
           gsap.to('.instruction-root', { opacity: 1, duration: 2, ease: 'none' });
           ScrollTrigger.refresh();
+          setTimeout(() => {
+            ScrollTrigger.refresh();
+          }, 150);
         }
       });
 
@@ -75,10 +89,32 @@ export default function LoadingScreen({ percentage, loading }) {
     }
   };
 
+  // If loading is finished and user attempts to scroll or swipe, automatically enter
+  useEffect(() => {
+    if (!loading) {
+      const handleUserAttemptScroll = () => {
+        handleEnter();
+      };
+      window.addEventListener('wheel', handleUserAttemptScroll, { once: true, passive: true });
+      window.addEventListener('touchmove', handleUserAttemptScroll, { once: true, passive: true });
+      return () => {
+        window.removeEventListener('wheel', handleUserAttemptScroll);
+        window.removeEventListener('touchmove', handleUserAttemptScroll);
+      };
+    }
+  }, [loading]);
+
   if (hidden) return null;
 
   return (
-    <div className="loading" ref={loadingDivRef}>
+    <div
+      className="loading"
+      ref={loadingDivRef}
+      onClick={() => {
+        if (!loading) handleEnter();
+      }}
+      style={{ cursor: !loading ? 'pointer' : 'default' }}
+    >
       <div className="content">
         <video
           width="500"
@@ -97,7 +133,13 @@ export default function LoadingScreen({ percentage, loading }) {
         </div>
         <span className="percentage">{displayedPercent}%</span>
       </div>
-      <button className="start-button" onClick={handleEnter}>
+      <button
+        className="start-button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleEnter();
+        }}
+      >
         Enter
       </button>
     </div>
