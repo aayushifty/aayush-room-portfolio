@@ -28,7 +28,7 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
   const activeClip = CINEMA_CLIPS[activeAct];
 
   return (
-    <header className="cinema-hud-arrive pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-[#06080d]/75 via-[#06080d]/28 to-transparent pb-6">
+    <header className="cinema-hud-arrive pointer-events-none fixed inset-x-0 top-0 z-40 pb-6">
       <a
         href="#cinema-runway"
         className="skip-link visually-hidden pointer-events-auto"
@@ -48,18 +48,18 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
         />
       </div>
 
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 pt-3.5 sm:px-10 sm:pt-4">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 pt-4 sm:px-10">
         <button
           type="button"
           onClick={() => onNavigateSection('act-studio')}
-          className="pointer-events-auto font-display text-sm font-bold tracking-wide text-white/95 transition hover:text-[#e8c589] sm:text-lg"
+          className="pointer-events-auto font-display text-base font-extrabold tracking-wide text-white transition hover:text-[#f5c46b] sm:text-xl [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]"
         >
           Aayush Bhatta
         </button>
 
         <nav
           aria-label="Primary"
-          className="pointer-events-auto flex items-center gap-3 sm:gap-5 md:gap-6"
+          className="pointer-events-auto flex items-center gap-5 sm:gap-7"
         >
           {PRIMARY_NAV_ITEMS.map((item) => {
             const isHighlighted = activeAct === item.act;
@@ -69,10 +69,10 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
                 type="button"
                 onClick={() => onNavigateSection(item.id)}
                 className={cn(
-                  'hidden min-h-9 font-sans text-xs font-medium tracking-wide transition md:inline-flex md:items-center',
+                  'hidden min-h-9 font-sans text-xs tracking-wide transition md:inline-flex md:items-center [text-shadow:0_2px_10px_rgb(0_0_0/0.85)]',
                   isHighlighted
-                    ? 'text-[#e8c589]'
-                    : 'text-slate-300/80 hover:text-white'
+                    ? 'font-bold text-[#f5c46b]'
+                    : 'font-medium text-slate-200/85 hover:text-white'
                 )}
               >
                 {item.label}
@@ -83,30 +83,27 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
           <span
             ref={timecodeRef}
             aria-label="Timeline position"
-            className="hidden rounded-full border border-white/10 bg-black/35 px-2.5 py-1 font-mono-tech text-[10px] tracking-[0.14em] text-slate-300/90 tabular-nums sm:inline-flex"
+            className="hidden font-mono-tech text-[11px] font-medium tracking-[0.14em] text-slate-300/90 tabular-nums sm:inline-flex [text-shadow:0_2px_10px_rgb(0_0_0/0.85)]"
           >
-            00:00 / 00:30
+            00:00 / 00:20
           </span>
 
           <button
             type="button"
             onClick={onToggleAutoPlay}
-            aria-pressed={isAutoPlaying}
             className={cn(
-              'inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.16em] transition sm:px-3',
-              isAutoPlaying
-                ? 'border-amber-300/70 bg-amber-300/20 text-[#fef3c7] shadow-[0_0_16px_rgba(245,196,107,0.2)]'
-                : 'border-white/15 bg-black/45 text-slate-200 hover:border-amber-300/50 hover:text-white'
+              'cinema-link-action min-h-9 font-sans text-xs font-bold tracking-wide transition',
+              isAutoPlaying ? 'text-[#f5c46b]' : 'text-white hover:text-[#f5c46b]'
             )}
           >
             {isAutoPlaying ? (
               <>
-                <Pause className="h-3 w-3" aria-hidden="true" />
+                <Pause className="h-3.5 w-3.5 text-[#f5c46b]" aria-hidden="true" />
                 <span>Pause</span>
               </>
             ) : (
               <>
-                <Volume2 className="h-3 w-3 text-[#f5c46b]" aria-hidden="true" />
+                <Volume2 className="h-3.5 w-3.5 text-[#f5c46b]" aria-hidden="true" />
                 <span>Play Reel</span>
               </>
             )}
@@ -115,7 +112,7 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
           <button
             type="button"
             onClick={() => onNavigateSection('section-contact')}
-            className="cinema-link-action min-h-9 font-sans text-xs font-semibold tracking-wide text-[#e8c589] hover:text-white"
+            className="cinema-link-action min-h-9 font-sans text-xs font-bold tracking-wide text-[#f5c46b] hover:text-white"
           >
             Contact
           </button>

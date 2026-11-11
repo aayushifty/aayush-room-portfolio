@@ -69,7 +69,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
       const subtleDrift = reducedMotionRef.current
         ? 1.0
-        : 1.0 + Math.sin(state.globalProgress * Math.PI) * 0.018;
+        : 1.0 + Math.sin(state.globalProgress * Math.PI) * 0.006;
 
       if (state.secondaryClip !== null) {
         // Pre-warm boundary frames of the upcoming continuous segment before scroll arrives
@@ -262,7 +262,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     >
       <img
         ref={posterRef}
-        src="/frames/clip1/001.webp?v=20261111"
+        src="/frames/clip1/001.webp?v=20261111v2"
         alt=""
         width={1280}
         height={720}
@@ -277,25 +277,16 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       {/* CSS Scroll-Driven Atmospheric Rim Aura (composited on modern engines) */}
       <div className="cinema-scroll-aura pointer-events-none absolute inset-0" />
 
-      {/* Feathered side breathing room keeping center column open while grounding flank copy */}
+      {/* Feather only outer viewport edges lightly so video clarity stays vivid */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(90deg, rgba(6,8,13,0.42) 0%, rgba(6,8,13,0.14) 20%, rgba(6,8,13,0) 36%, rgba(6,8,13,0) 64%, rgba(6,8,13,0.14) 80%, rgba(6,8,13,0.42) 100%)',
+            'linear-gradient(180deg, rgba(6,8,13,0.34) 0%, rgba(6,8,13,0) 14%, rgba(6,8,13,0) 78%, rgba(6,8,13,0.44) 100%)',
         }}
       />
 
-      {/* Top/bottom subtle edge breathing room */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(6,8,13,0.34) 0%, rgba(6,8,13,0) 14%, rgba(6,8,13,0) 76%, rgba(6,8,13,0.48) 100%)',
-        }}
-      />
-
-      <div className="cinema-grain absolute inset-0 opacity-[0.03]" />
+      <div className="cinema-grain absolute inset-0 opacity-[0.02]" />
     </div>
   );
 };

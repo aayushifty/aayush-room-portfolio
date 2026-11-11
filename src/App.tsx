@@ -356,7 +356,7 @@ export default function App(): React.ReactElement {
       />
 
       {/* Unified Sticky Scroll-Synced Runway */}
-      <main id="cinema-runway" className="relative z-10 h-[2100vh]">
+      <main id="cinema-runway" className="relative z-10 h-[1950vh]">
         <div
           id="cinema-stage-beats"
           className="cinema-perspective-stage sticky top-0 h-[100dvh] w-full overflow-hidden"

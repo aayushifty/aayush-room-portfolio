@@ -21,7 +21,7 @@ function padFrame(indexOneBased: number): string {
   return String(indexOneBased).padStart(3, '0');
 }
 
-const FRAME_CACHE_VERSION = '20261111';
+const FRAME_CACHE_VERSION = '20261111v2';
 
 function getFrameUrl(clipIndex: ClipIndex, frameIdxZeroBased: number): string {
   const clip = CINEMA_CLIPS[clipIndex];
@@ -30,8 +30,8 @@ function getFrameUrl(clipIndex: ClipIndex, frameIdxZeroBased: number): string {
 }
 
 /**
- * Manages compressed WebP frame fetching and an LRU-bounded ImageBitmap cache
- * so scrolling across 432 720p frames stays instant in both directions without VRAM bloat.
+ * Manages high-quality WebP frame fetching and an LRU-bounded ImageBitmap cache
+ * so scrolling across 480 720p frames stays instant and razor sharp in both directions.
  */
 export class FrameSequenceStore {
   private blobs: Map<string, Blob> = new Map();
@@ -429,6 +429,8 @@ export function drawCoverBitmap(
   const dy = (canvasHeight - drawH) * 0.24;
 
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.globalAlpha = alpha;
   ctx.drawImage(bmp, dx, dy, drawW, drawH);
   ctx.restore();

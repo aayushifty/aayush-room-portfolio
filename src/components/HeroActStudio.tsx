@@ -1,11 +1,20 @@
 import React from 'react';
-import { ArrowDown, ArrowRight, Pause, Volume2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUpRight,
+  Cpu,
+  Eye,
+  Mic,
+  Pause,
+  Radio,
+  Volume2,
+} from 'lucide-react';
 import {
   AI_PRACTICE_PILLARS,
   DISCIPLINES,
+  Discipline,
   PROFILE,
 } from '@/data/portfolio';
-import { BeatTimingSpec } from '@/lib/scrollBeats';
 import { SoloBeatStage } from '@/components/SoloBeatStage';
 
 export interface HeroActStudioProps {
@@ -14,33 +23,19 @@ export interface HeroActStudioProps {
   onToggleAutoPlay?: () => void;
 }
 
-const BEAT_INTRO_GREET: BeatTimingSpec = {
-  clip: 0,
-  inStart: 0,
-  inEnd: 0,
-  outStart: 0.21,
-  outEnd: 0.25,
-  gesture: 'intro-wave',
-  holdStart: true,
-};
-
-const BEAT_IDENTITY: BeatTimingSpec = {
-  clip: 0,
-  inStart: 0.255,
-  inEnd: 0.31,
-  outStart: 0.56,
-  outEnd: 0.615,
-  gesture: 'turn-left',
-};
-
-const BEAT_DISCIPLINES: BeatTimingSpec = {
-  clip: 0,
-  inStart: 0.62,
-  inEnd: 0.675,
-  outStart: 0.915,
-  outEnd: 0.965,
-  gesture: 'turn-right',
-};
+function DisciplineIcon({ name }: { name: Discipline['iconName'] }): React.ReactElement {
+  const iconClass = 'h-4 w-4 text-[#f5c46b]';
+  switch (name) {
+    case 'cpu':
+      return <Cpu className={iconClass} aria-hidden="true" />;
+    case 'eye':
+      return <Eye className={iconClass} aria-hidden="true" />;
+    case 'circuit':
+      return <Radio className={iconClass} aria-hidden="true" />;
+    case 'mic':
+      return <Mic className={iconClass} aria-hidden="true" />;
+  }
+}
 
 export const HeroActStudio: React.FC<HeroActStudioProps> = ({
   onNavigateSection,
@@ -48,179 +43,274 @@ export const HeroActStudio: React.FC<HeroActStudioProps> = ({
   onToggleAutoPlay,
 }) => {
   return (
-    <div aria-label="Act I — Introduction and Studio Turntable">
-      {/* Beat 0 (0.00s - 2.35s): Opening Wave & Subtitle-Inspired Spoken Lockup */}
+    <section
+      id="act-studio"
+      aria-labelledby="heading-studio"
+      className="pointer-events-none absolute inset-0"
+    >
+      {/* Beat 0 (0.00s - 2.15s): Spoken "Hi, I'm Aayush." Opening Wave Subtitle Lockup */}
       <SoloBeatStage
         id="beat-intro-greet"
-        timing={BEAT_INTRO_GREET}
-        align="intro-bottom"
+        align="center"
+        vertical="end"
+        bottomInset
         ariaLabelledBy="intro-greet-heading"
+        timing={{
+          clip: 0,
+          inStart: 0,
+          inEnd: 0,
+          outStart: 0.188,
+          outEnd: 0.222,
+          gesture: 'intro-wave',
+          holdStart: true,
+        }}
       >
-        <div className="cinema-lower-veil relative flex flex-col items-center px-3 py-2 text-center">
-          <div className="mb-2.5 flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
-            <span className="cinema-voice-cue inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-2.5 py-1 font-mono-tech text-[9.5px] uppercase tracking-[0.18em] text-slate-200 backdrop-blur-sm sm:px-3 sm:text-[10px] sm:tracking-[0.22em]">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-2 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-2 font-mono-tech text-[11px] font-bold uppercase tracking-[0.2em] text-slate-200 [text-shadow:0_2px_12px_rgb(0_0_0/0.95)]">
               <span className="cinema-wave-bars" aria-hidden="true">
                 <i />
                 <i />
                 <i />
               </span>
-              00:00 · Greeting
+              <span>00:00 · Introduction</span>
             </span>
 
             {onToggleAutoPlay && (
-              <button
-                type="button"
-                onClick={onToggleAutoPlay}
-                className="inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-300/40 bg-black/55 px-2.5 py-1 font-mono-tech text-[9.5px] uppercase tracking-[0.16em] text-[#f6d99a] backdrop-blur-sm transition hover:border-amber-200/70 hover:bg-amber-300/20 sm:bg-amber-300/12 sm:px-3 sm:text-[10px] sm:tracking-[0.18em]"
-              >
-                {isAutoPlaying ? (
-                  <>
-                    <Pause className="h-3 w-3" aria-hidden="true" />
-                    Pause Reel
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="h-3 w-3" aria-hidden="true" />
-                    Watch With Sound
-                  </>
-                )}
-              </button>
+              <>
+                <span aria-hidden="true" className="text-white/30">
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={onToggleAutoPlay}
+                  className="cinema-link-action min-h-8 font-mono-tech text-[11px] font-bold uppercase tracking-[0.18em] text-[#f5c46b] hover:text-white"
+                >
+                  {isAutoPlaying ? (
+                    <>
+                      <Pause className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Pause Reel</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Watch With Sound</span>
+                    </>
+                  )}
+                </button>
+              </>
             )}
           </div>
 
           <h1
             id="intro-greet-heading"
-            className="cinema-hero-title cinema-subtitle-bloom text-balance font-extrabold tracking-tight text-white"
+            className="cinema-display-title cinema-hero-title"
           >
             <span className="cinema-word-reveal">Hi,</span>{' '}
             <span className="cinema-word-reveal cinema-word-delay-1">I&rsquo;m</span>{' '}
-            <span className="cinema-word-reveal cinema-word-delay-2 cinema-gold-shimmer">
+            <strong className="cinema-word-reveal cinema-word-delay-2 cinema-gold-shimmer font-extrabold">
               Aayush.
-            </span>
+            </strong>
           </h1>
 
-          <p className="cinema-subtitle mt-2 max-w-xl text-sm font-normal leading-relaxed text-slate-200/95 sm:text-base">
+          <p className="cinema-subtitle mt-2.5 text-sm sm:text-base">
+            <strong className="font-bold text-white">{PROFILE.fullName}</strong>{' '}
+            <span className="font-bold text-[#f5c46b]">({PROFILE.handle})</span> ·
             Builder of quiet, perceptual software —{' '}
-            <span className="text-white/95">{PROFILE.location}</span> ·{' '}
-            <span className="text-slate-300">{PROFILE.academic}</span>
+            <strong className="font-semibold text-white">{PROFILE.location}</strong>
           </p>
 
           <button
             type="button"
-            onClick={() => onNavigateSection('beat-identity')}
-            className="mt-3.5 inline-flex items-center gap-2 font-mono-tech text-[11px] uppercase tracking-[0.24em] text-slate-300/80 transition hover:text-white"
+            onClick={() => onNavigateSection('beat-hero')}
+            className="cinema-link-action mt-3 font-mono-tech text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-200 hover:text-[#f5c46b]"
           >
-            <span>Scroll to move with the sequence</span>
-            <ArrowDown className="h-3.5 w-3.5 animate-bounce" aria-hidden="true" />
+            <span>Scroll to enter</span>
+            <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       </SoloBeatStage>
 
-      {/* Beat 1 (2.65s - 6.10s): 360 Turntable Profile — Left Flank Identity */}
+      {/* Beat 1 (2.25s - 4.30s): Right Flank — Original Hero Copy Preserved */}
       <SoloBeatStage
-        id="beat-identity"
-        timing={BEAT_IDENTITY}
-        align="left"
-        ariaLabelledBy="identity-heading"
+        id="beat-hero"
+        align="right"
+        ariaLabelledBy="heading-studio"
+        timing={{
+          clip: 0,
+          inStart: 0.224,
+          inEnd: 0.264,
+          outStart: 0.395,
+          outEnd: 0.432,
+          gesture: 'turn-left',
+        }}
       >
-        <div className="cinema-flank-scrim-left space-y-3.5 text-left">
-          <div className="space-y-1.5">
-            <p className="cinema-kicker font-mono-tech text-[11px] uppercase tracking-[0.26em] text-slate-300">
-              {PROFILE.handle} · Profile
-            </p>
-            <h2
-              id="identity-heading"
-              className="cinema-display-title cinema-scene-title text-white"
-            >
-              {PROFILE.fullName}
-            </h2>
-          </div>
+        <div className="md:text-right">
+          <p className="cinema-kicker">{PROFILE.fullName}</p>
 
-          <div className="cinema-accent-beam h-[2px] w-16 bg-gradient-to-r from-[#f59e0b] via-amber-200 to-transparent" />
+          <h2
+            id="heading-studio"
+            className="cinema-display-title cinema-hero-title mt-3"
+          >
+            Engineering{' '}
+            <strong className="cinema-gold-shimmer font-extrabold">Living</strong>{' '}
+            Software
+          </h2>
 
-          <p className="cinema-subtitle text-sm leading-relaxed text-slate-200">
-            {PROFILE.leadBio}
+          <div
+            className="cinema-accent-beam mt-4 w-24 md:ml-auto"
+            aria-hidden="true"
+          />
+
+          <p className="cinema-subtitle mt-4 text-sm sm:text-base md:ml-auto">
+            I am{' '}
+            <strong className="font-bold text-white">
+              {PROFILE.fullName} ({PROFILE.handle})
+            </strong>{' '}
+            from <strong className="font-bold text-white">{PROFILE.location}</strong>{' '}
+            — building autonomous systems, multimodal AI, and interactive tools.
           </p>
 
-          <dl className="grid grid-cols-1 gap-1.5 pt-1 text-xs">
-            {PROFILE.facts.map((fact) => (
-              <div
-                key={fact.label}
-                className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-1"
-              >
-                <dt className="font-mono-tech text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                  {fact.label}
-                </dt>
-                <dd className="text-right font-medium text-slate-100">
-                  {fact.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
-          <ul className="space-y-1.5 pt-1">
-            {AI_PRACTICE_PILLARS.map((pillar) => (
-              <li key={pillar.id} className="text-xs leading-snug text-slate-300">
-                <span className="font-semibold text-white">{pillar.label}: </span>
-                <span className="text-slate-300/90">{pillar.summary}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </SoloBeatStage>
-
-      {/* Beat 2 (6.25s - 9.65s): Return Front Smile — Right Flank Disciplines */}
-      <SoloBeatStage
-        id="beat-disciplines"
-        timing={BEAT_DISCIPLINES}
-        align="right"
-        ariaLabelledBy="disciplines-heading"
-      >
-        <div className="cinema-flank-scrim-right space-y-3.5 text-left md:text-right">
-          <div className="space-y-1.5">
-            <p className="cinema-kicker font-mono-tech text-[11px] uppercase tracking-[0.26em] text-amber-200/90">
-              Engineering Focus
-            </p>
-            <h2
-              id="disciplines-heading"
-              className="cinema-display-title cinema-scene-title text-white"
-            >
-              Craft &amp; Practice
-            </h2>
-          </div>
-
-          <div className="cinema-accent-beam h-[2px] w-16 bg-gradient-to-r from-[#f59e0b] to-transparent md:ml-auto md:bg-gradient-to-l" />
-
-          <ul className="space-y-2.5">
-            {DISCIPLINES.map((disc, idx) => (
-              <li key={disc.id} className="space-y-0.5">
-                <div className="flex items-baseline gap-2 md:justify-end">
-                  <span className="font-mono-tech text-[10px] text-amber-300/80">
-                    0{idx + 1}
-                  </span>
-                  <h3 className="text-xs font-semibold tracking-wide text-white">
-                    {disc.title}
-                  </h3>
-                </div>
-                <p className="text-[11px] leading-relaxed text-slate-300">
-                  {disc.tagline}
-                </p>
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex flex-wrap items-center gap-4 pt-1 md:justify-end">
+          <div className="mt-5 flex flex-wrap items-center gap-6 md:justify-end">
             <button
               type="button"
               onClick={() => onNavigateSection('act-works')}
-              className="cinema-link-action inline-flex items-center gap-1.5 font-mono-tech text-[11px] uppercase tracking-[0.2em] text-[#f59e0b] hover:text-white"
+              className="cinema-link-action font-sans text-sm font-bold text-[#f5c46b] hover:text-white"
             >
-              <span>Systems Showcase</span>
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Selected Systems</span>
+              <ArrowDown className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateSection('section-contact')}
+              className="cinema-link-action font-sans text-sm font-semibold text-white hover:text-[#f5c46b]"
+            >
+              <span>Contact</span>
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
       </SoloBeatStage>
-    </div>
+
+      {/* Beat 2 (4.35s - 6.20s): Turntable Profile — Core AI Practice */}
+      <SoloBeatStage
+        id="beat-identity"
+        align="left"
+        ariaLabelledBy="heading-identity"
+        timing={{
+          clip: 0,
+          inStart: 0.435,
+          inEnd: 0.475,
+          outStart: 0.585,
+          outEnd: 0.620,
+          gesture: 'turn-right',
+        }}
+      >
+        <div>
+          <p className="cinema-kicker">Core Practice</p>
+
+          <h2
+            id="heading-identity"
+            className="cinema-display-title cinema-scene-title mt-2.5"
+          >
+            Building With{' '}
+            <strong className="cinema-gold-shimmer font-extrabold">
+              Intelligence
+            </strong>
+          </h2>
+
+          <div className="cinema-accent-beam mt-3 w-20" aria-hidden="true" />
+
+          <p className="mt-3 font-sans text-sm font-bold text-[#f5c46b] sm:text-base">
+            AI Developer · Agentic &amp; Multimodal Systems
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {AI_PRACTICE_PILLARS.map((pillar) => (
+              <div key={pillar.id}>
+                <h3 className="font-sans text-xs font-extrabold tracking-wide text-white sm:text-sm">
+                  {pillar.label}
+                </h3>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-200/90 sm:text-[13px] [text-shadow:0_2px_10px_rgb(0_0_0/0.92)]">
+                  {pillar.summary}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-200/90 [text-shadow:0_2px_10px_rgb(0_0_0/0.92)]">
+            <span className="font-semibold text-white">{PROFILE.location}</span>
+            <span>{PROFILE.academic}</span>
+            <a
+              href="https://github.com/aayushbhatta230-ux"
+              target="_blank"
+              rel="noreferrer"
+              className="cinema-link-action font-semibold text-[#f5c46b] hover:text-white"
+            >
+              <span>GitHub Profile</span>
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+      </SoloBeatStage>
+
+      {/* Beats 1.4 - 1.7 (6.25s - 9.68s): Core Disciplines Alternating Right / Left */}
+      {DISCIPLINES.map((discipline, idx) => {
+        const starts = [0.625, 0.710, 0.795, 0.880] as const;
+        const inEnds = [0.650, 0.735, 0.820, 0.905] as const;
+        const outStarts = [0.682, 0.767, 0.852, 0.938] as const;
+        const outEnds = [0.706, 0.791, 0.876, 0.968] as const;
+        const align = idx % 2 === 0 ? 'right' : 'left';
+
+        return (
+          <SoloBeatStage
+            key={discipline.id}
+            id={idx === 0 ? 'beat-disciplines' : undefined}
+            align={align}
+            timing={{
+              clip: 0,
+              inStart: starts[idx],
+              inEnd: inEnds[idx],
+              outStart: outStarts[idx],
+              outEnd: outEnds[idx],
+            }}
+          >
+            <article className={align === 'right' ? 'md:text-right' : undefined}>
+              <div
+                className={`cinema-kicker flex items-center gap-2 ${
+                  align === 'right' ? 'md:justify-end' : ''
+                }`}
+              >
+                <DisciplineIcon name={discipline.iconName} />
+                <span>Discipline {discipline.index}</span>
+              </div>
+
+              <h3 className="cinema-display-title cinema-scene-title mt-2.5">
+                {discipline.title}
+              </h3>
+
+              <div
+                className={`cinema-accent-beam mt-3 w-16 ${
+                  align === 'right' ? 'md:ml-auto' : ''
+                }`}
+                aria-hidden="true"
+              />
+
+              <p className="mt-3 font-sans text-xs font-extrabold tracking-wide text-[#f5c46b] sm:text-sm [text-shadow:0_2px_12px_rgb(0_0_0/0.94)]">
+                {discipline.tagline}
+              </p>
+
+              <p
+                className={`cinema-subtitle mt-2.5 text-xs sm:text-sm ${
+                  align === 'right' ? 'md:ml-auto' : ''
+                }`}
+              >
+                {discipline.summary}
+              </p>
+            </article>
+          </SoloBeatStage>
+        );
+      })}
+    </section>
   );
 };

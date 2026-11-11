@@ -108,14 +108,16 @@
   }
 }
 
-.cinema-kicker {
-  font-family: var(--font-kicker);
-  font-size: clamp(0.75rem, 0.7rem + 0.2vw, 0.88rem);
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  line-height: 1.35;
-  color: var(--act-accent, #e8c589);
-  text-shadow: 0 2px 12px rgb(0 0 0 / 0.85);
+@layer components {
+  .cinema-kicker {
+    font-family: var(--font-kicker);
+    font-size: clamp(0.75rem, 0.7rem + 0.2vw, 0.88rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.35;
+    color: var(--act-accent, #e8c589);
+    text-shadow: 0 2px 14px rgb(0 0 0 / 0.94);
+  }
 }
 
 .cinema-subtitle {
@@ -123,36 +125,48 @@
   font-size-adjust: from-font;
   font-weight: 400;
   line-height: 1.6;
-  color: rgb(241 245 249 / 0.88);
+  color: rgb(241 245 249 / 0.92);
   max-width: 50ch;
   text-wrap: pretty;
   overflow-wrap: break-word;
-  text-shadow: 0 2px 14px rgb(0 0 0 / 0.88);
+  text-shadow:
+    0 2px 14px rgb(0 0 0 / 0.96),
+    0 6px 24px rgb(0 0 0 / 0.82);
 }
 
-/* Luminous gold accent with crisp dark separation shadows (no transparent-fill bleed) */
+/* Bold luminous accents with crisp dark separation shadows (zero transparent-fill bleed) */
 .cinema-gold-shimmer {
+  font-weight: 800;
   color: #f5c46b;
   text-shadow:
-    0 2px 12px rgb(0 0 0 / 0.92),
-    0 8px 28px rgb(0 0 0 / 0.78),
-    0 0 26px rgba(245, 196, 107, 0.24);
+    0 2px 12px rgb(0 0 0 / 0.96),
+    0 8px 28px rgb(0 0 0 / 0.84),
+    0 0 26px rgba(245, 196, 107, 0.28);
+}
+
+.cinema-teal-shimmer {
+  font-weight: 800;
+  color: #5eead4;
+  text-shadow:
+    0 2px 12px rgb(0 0 0 / 0.96),
+    0 8px 28px rgb(0 0 0 / 0.84),
+    0 0 26px rgba(94, 234, 212, 0.26);
 }
 
 @media (prefers-reduced-motion: no-preference) {
   [data-cinema-beat] .cinema-gold-shimmer {
     color: #fef3c7;
     transition:
-      color 0.9s var(--ease-expo-out) 0.16s,
-      text-shadow 0.9s var(--ease-expo-out) 0.16s;
+      color 0.85s var(--ease-expo-out) 0.12s,
+      text-shadow 0.85s var(--ease-expo-out) 0.12s;
   }
 
   [data-cinema-beat][data-beat-phase='active'] .cinema-gold-shimmer {
     color: #f5c46b;
     text-shadow:
-      0 2px 12px rgb(0 0 0 / 0.92),
-      0 8px 28px rgb(0 0 0 / 0.78),
-      0 0 30px rgba(245, 196, 107, 0.34);
+      0 2px 12px rgb(0 0 0 / 0.96),
+      0 8px 28px rgb(0 0 0 / 0.84),
+      0 0 30px rgba(245, 196, 107, 0.36);
   }
 }
 
@@ -255,46 +269,7 @@
   background-size: 180px 180px;
 }
 
-/* Soft feathered editorial readability zones without enclosing card boxes */
-.cinema-flank-scrim-left,
-.cinema-flank-scrim-right {
-  position: relative;
-  padding: 0.5rem 0.25rem;
-}
-
-@media (min-width: 768px) {
-  .cinema-flank-scrim-left {
-    padding: 0.9rem 1rem 0.9rem 0.65rem;
-    border-radius: 1.25rem;
-    background: radial-gradient(
-      ellipse at 20% 50%,
-      rgba(6, 8, 13, 0.56) 0%,
-      rgba(6, 8, 13, 0.24) 60%,
-      rgba(6, 8, 13, 0) 90%
-    );
-  }
-
-  .cinema-flank-scrim-right {
-    padding: 0.9rem 0.65rem 0.9rem 1rem;
-    border-radius: 1.25rem;
-    background: radial-gradient(
-      ellipse at 80% 50%,
-      rgba(6, 8, 13, 0.56) 0%,
-      rgba(6, 8, 13, 0.24) 60%,
-      rgba(6, 8, 13, 0) 90%
-    );
-  }
-}
-
-#beat-intro-greet .cinema-lower-veil {
-  border-radius: 1.5rem;
-  background: radial-gradient(
-    ellipse at 50% 58%,
-    rgba(6, 8, 13, 0.68) 0%,
-    rgba(6, 8, 13, 0.34) 56%,
-    rgba(6, 8, 13, 0) 86%
-  );
-}
+/* Pure unboxed editorial typography relies on strong text-shadow + wide seamless SoloBeatStage fades */
 
 /* Subtitle-styled equalizer cue bars beside opening greeting */
 .cinema-wave-bars {

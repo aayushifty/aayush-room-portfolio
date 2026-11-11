@@ -2,93 +2,95 @@ import React from 'react';
 import { beatDataAttrs, BeatTimingSpec } from '@/lib/scrollBeats';
 import { cn } from '@/lib/utils';
 
-export type SoloBeatAlignment =
-  | 'intro-bottom'
-  | 'left'
-  | 'right'
-  | 'top-left'
-  | 'lower-left'
-  | 'right-mid-low'
-  | 'split'
-  | 'bottom-center';
-
 export interface SoloBeatStageProps {
   timing: BeatTimingSpec;
-  align: SoloBeatAlignment;
+  align: 'left' | 'right' | 'center';
+  vertical?: 'end' | 'center';
+  bottomInset?: boolean;
   id?: string;
   ariaLabelledBy?: string;
   className?: string;
   children: React.ReactNode;
 }
 
-const ALIGNMENT_STAGE_CLASSES: Record<SoloBeatAlignment, string> = {
-  'intro-bottom':
-    'inset-x-4 bottom-5 mx-auto flex max-w-2xl flex-col items-center text-center md:bottom-[6.5%]',
-  left:
-    'inset-x-4 bottom-5 max-w-[420px] md:inset-x-auto md:bottom-auto md:left-6 md:top-1/2 md:w-[310px] md:-translate-y-1/2 lg:left-10 lg:w-[340px] xl:left-12 xl:w-[360px]',
-  right:
-    'inset-x-4 bottom-5 ml-auto max-w-[420px] md:inset-x-auto md:bottom-auto md:right-5 md:top-1/2 md:w-[270px] md:-translate-y-1/2 lg:right-8 lg:w-[295px] xl:right-10 xl:w-[315px]',
-  'top-left':
-    'inset-x-4 bottom-5 max-w-[420px] md:inset-x-auto md:bottom-auto md:left-5 md:top-[13%] md:w-[325px] lg:left-9 lg:w-[355px]',
-  'lower-left':
-    'inset-x-4 bottom-5 max-w-[430px] md:inset-x-auto md:bottom-[7.5%] md:left-6 md:w-[410px] lg:left-10 lg:w-[440px]',
-  'right-mid-low':
-    'inset-x-4 bottom-5 ml-auto max-w-[420px] md:inset-x-auto md:bottom-[7.5%] md:right-5 md:w-[305px] lg:right-10 lg:w-[335px]',
-  split:
-    'inset-x-3 bottom-3 flex flex-col gap-2 md:inset-x-5 md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:flex-row md:items-center md:justify-between md:gap-4 lg:inset-x-9 xl:inset-x-12',
-  'bottom-center':
-    'inset-x-4 bottom-4 mx-auto flex max-w-2xl flex-col items-center text-center md:bottom-[4%]',
-};
-
-const DATA_ALIGN_SIDE: Record<SoloBeatAlignment, string> = {
-  'intro-bottom': 'bottom',
-  left: 'left',
-  right: 'right',
-  'top-left': 'left',
-  'lower-left': 'left',
-  'right-mid-low': 'right',
-  split: 'split',
-  'bottom-center': 'bottom',
-};
-
 /**
- * Choreography container synchronizing typography layers cleanly to video timestamps
- * and spatial hand gestures with zero box clutter over the subject center column.
+ * Renders strictly ONE open, unboxed content block at a time on either the left flank,
+ * right flank, or centered composition with unified physics-spring choreography.
  */
 export const SoloBeatStage: React.FC<SoloBeatStageProps> = ({
   timing,
   align,
+  vertical = 'center',
+  bottomInset = false,
   id,
   ariaLabelledBy,
   className,
   children,
 }) => {
-  const attrs = beatDataAttrs(timing);
+  const alignClass =
+    align === 'right'
+      ? 'justify-end'
+      : align === 'center'
+        ? 'justify-center'
+        : 'justify-start';
+
+  const verticalClass = vertical === 'end' ? 'items-end' : 'items-center';
+
+  const padBottomClass =
+    bottomInset
+      ? 'pb-16 sm:pb-20'
+      : vertical === 'end'
+        ? 'pb-5 sm:pb-12'
+        : 'pb-8 sm:pb-10';
 
   return (
-    <section
+    <div
       id={id}
       aria-labelledby={ariaLabelledBy}
-      {...attrs}
-      data-align={DATA_ALIGN_SIDE[align]}
+      data-align={align}
+      {...beatDataAttrs(timing)}
       className={cn(
-        'cinema-perspective-stage pointer-events-none fixed inset-0 z-20 overflow-hidden',
+        'pointer-events-none fixed inset-0 z-20 flex px-5 pt-20 sm:px-10 lg:px-14',
+        verticalClass,
+        padBottomClass,
         className
       )}
     >
+      {/* Seamless open atmospheric veil — zero boxes, borders, or rounded patches */}
       <div
-        data-beat-stage="true"
+        aria-hidden="true"
         className={cn(
-          'cinema-flank-container absolute',
-          ALIGNMENT_STAGE_CLASSES[align]
+          'pointer-events-none absolute inset-0',
+          align === 'left' &&
+            'bg-[linear-gradient(90deg,rgba(6,8,13,0.72)_0%,rgba(6,8,13,0.38)_34%,rgba(6,8,13,0)_56%)] max-sm:bg-[linear-gradient(0deg,rgba(6,8,13,0.84)_0%,rgba(6,8,13,0.44)_48%,rgba(6,8,13,0)_76%)]',
+          align === 'right' &&
+            'bg-[linear-gradient(270deg,rgba(6,8,13,0.72)_0%,rgba(6,8,13,0.38)_34%,rgba(6,8,13,0)_56%)] max-sm:bg-[linear-gradient(0deg,rgba(6,8,13,0.84)_0%,rgba(6,8,13,0.44)_48%,rgba(6,8,13,0)_76%)]',
+          align === 'center' &&
+            vertical === 'end' &&
+            'bg-[linear-gradient(0deg,rgba(6,8,13,0.92)_0%,rgba(6,8,13,0.68)_34%,rgba(6,8,13,0)_64%)]',
+          align === 'center' &&
+            vertical !== 'end' &&
+            'bg-[radial-gradient(ellipse_78%_68%_at_50%_50%,rgba(6,8,13,0.78)_0%,rgba(6,8,13,0.44)_54%,rgba(6,8,13,0)_100%)]'
         )}
-      >
-        {align === 'split' ? (
-          children
+      />
+
+      <div className={cn('relative z-10 mx-auto flex w-full max-w-[1440px]', alignClass)}>
+        {align === 'center' ? (
+          <div
+            data-beat-stage="true"
+            className="cinema-flank-container pointer-events-auto w-full max-w-4xl"
+          >
+            {children}
+          </div>
         ) : (
-          <div className="pointer-events-auto">{children}</div>
+          <div
+            data-beat-stage="true"
+            className="cinema-flank-container pointer-events-auto w-full max-w-[400px] sm:max-w-[445px]"
+          >
+            {children}
+          </div>
         )}
       </div>
-    </section>
+    </div>
   );
 };

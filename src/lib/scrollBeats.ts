@@ -35,35 +35,30 @@ export interface NavScrollTarget {
 }
 
 /**
- * Total video duration is 30.00s (720 frames @ 24 fps):
- *   Act I   (clip 0): frames 0..239   (240 frames, 00.00s..10.00s) -> g: 0.0000..0.3333
- *   Act II  (clip 1): frames 240..525 (286 frames, 10.00s..21.92s) -> g: 0.3333..0.7306
- *   Act III (clip 2): frames 526..719 (194 frames, 21.92s..30.00s) -> g: 0.7306..1.0000
+ * Total video duration is 20.03s (480 frames @ 24 fps):
+ *   Act I   (clip 0): frames 0..239   (240 frames, 00.00s..10.00s) -> g: 0.0000..0.5000
+ *   Act II  (clip 1): frames 240..383 (144 frames, 10.00s..16.00s) -> g: 0.5000..0.8000
+ *   Act III (clip 2): frames 384..479 ( 96 frames, 16.00s..20.03s) -> g: 0.8000..1.0000
  */
-const CLIP1_BOUNDARY = 240 / 720; // 0.333333...
-const CLIP2_BOUNDARY = 526 / 720; // 0.730555...
-export const VIDEO_DURATION_SECONDS = 30.0;
+const CLIP1_BOUNDARY = 240 / 480; // 0.5
+const CLIP2_BOUNDARY = 384 / 480; // 0.8
+export const VIDEO_DURATION_SECONDS = 20.03;
 
 export const NAV_SCROLL_TARGETS: readonly NavScrollTarget[] = [
-  { id: 'act-studio', label: 'Intro', act: 0, globalProgress: 0.0 },
-  { id: 'act-works', label: 'Systems', act: 1, globalProgress: 0.408 },
-  { id: 'act-credentials', label: 'Credentials', act: 2, globalProgress: 0.768 },
+  { id: 'act-studio', label: 'Studio', act: 0, globalProgress: 0.0 },
+  { id: 'act-works', label: 'Systems', act: 1, globalProgress: 0.525 },
+  { id: 'act-credentials', label: 'Credentials', act: 2, globalProgress: 0.816 },
   { id: 'section-contact', label: 'Contact', act: 2, globalProgress: 0.985 },
 ];
 
 export const SECTION_PROGRESS_MAP: Record<string, number> = {
   'act-studio': 0.0,
   'beat-hero': 0.145,
-  'beat-identity': 0.145,
-  'beat-disciplines': 0.265,
-  'act-works': 0.408,
-  'beat-point-left': 0.478,
-  'beat-both-up': 0.542,
-  'beat-browse-works': 0.616,
-  'beat-point-upright': 0.700,
-  'act-credentials': 0.768,
-  'beat-double-right': 0.838,
-  'beat-navy-upright': 0.908,
+  'beat-identity': 0.255,
+  'beat-disciplines': 0.325,
+  'act-works': 0.525,
+  'act-credentials': 0.816,
+  'beat-beyond': 0.942,
   'section-contact': 0.985,
 };
 
@@ -80,9 +75,9 @@ export function smoothstep(edge0: number, edge1: number, x: number): number {
 }
 
 /**
- * Resolve continuous 720-frame timeline cleanly across 3 seamless contiguous acts.
+ * Resolve continuous 480-frame (20.03s) timeline cleanly across 3 seamless contiguous acts.
  * Zero crossfade blendAlpha is needed because clip1 -> clip2 -> clip3 are continuous cuts
- * from the exact same 30s capture; secondaryClip purely pre-warms boundary frames.
+ * from the exact same 20s capture; secondaryClip purely pre-warms boundary frames.
  */
 export function resolveUnifiedTimeline(scrollY: number, maxScroll: number): ScrubFrameState {
   const g = clamp01(maxScroll > 0 ? scrollY / maxScroll : 0);
