@@ -262,7 +262,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     >
       <img
         ref={posterRef}
-        src="/frames/clip1/001.webp"
+        src="/frames/clip1/001.webp?v=20261111"
         alt=""
         width={1280}
         height={720}

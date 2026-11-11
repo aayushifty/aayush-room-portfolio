@@ -21,10 +21,12 @@ function padFrame(indexOneBased: number): string {
   return String(indexOneBased).padStart(3, '0');
 }
 
+const FRAME_CACHE_VERSION = '20261111';
+
 function getFrameUrl(clipIndex: ClipIndex, frameIdxZeroBased: number): string {
   const clip = CINEMA_CLIPS[clipIndex];
   const clamped = Math.max(0, Math.min(clip.frameCount - 1, frameIdxZeroBased));
-  return `${clip.frameDir}/${padFrame(clamped + 1)}.webp`;
+  return `${clip.frameDir}/${padFrame(clamped + 1)}.webp?v=${FRAME_CACHE_VERSION}`;
 }
 
 /**
