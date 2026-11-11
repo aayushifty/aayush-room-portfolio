@@ -362,7 +362,7 @@ export class FrameSequenceStore {
           if (!job) break;
           await this.fetchAndDecode(job.item.clip, job.item.frame, job.item.pin);
           if (!job.urgent && this.active && sid === this.sessionId) {
-            await new Promise<void>((resolve) => window.setTimeout(resolve, 6));
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
           }
         }
       };
@@ -422,9 +422,9 @@ export function drawCoverBitmap(
   drawW *= scaleBoost;
   drawH *= scaleBoost;
 
-  // Slightly upper-biased focal alignment (44%) keeps subject head/eyes framed safely
+  // Upper-focal bias keeps curly hair crown and downward hands safe on wide screens
   const dx = (canvasWidth - drawW) * 0.5;
-  const dy = (canvasHeight - drawH) * 0.38;
+  const dy = (canvasHeight - drawH) * 0.24;
 
   ctx.save();
   ctx.globalAlpha = alpha;

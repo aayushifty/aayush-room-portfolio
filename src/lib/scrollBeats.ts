@@ -7,9 +7,23 @@ export interface BeatTimingSpec {
   inEnd: number;
   outStart: number;
   outEnd: number;
-  /** Keep visible through clip end (e.g. final contact transmission) */
+  /** Semantic gesture name used for CSS entrance kinematics */
+  gesture?:
+    | 'intro-wave'
+    | 'turn-left'
+    | 'turn-right'
+    | 'point-right'
+    | 'point-left'
+    | 'both-up'
+    | 'calm-floor'
+    | 'point-upright'
+    | 'double-left'
+    | 'double-right'
+    | 'navy-upright'
+    | 'point-down';
+  /** Keep visible through clip end (e.g. downward contact dock) */
   holdEnd?: boolean;
-  /** Already active at exact start of clip */
+  /** Already active at exact start of clip (e.g. opening wave greeting) */
   holdStart?: boolean;
 }
 
@@ -17,138 +31,162 @@ export interface NavScrollTarget {
   id: string;
   label: string;
   act: 0 | 1 | 2;
-  /** Target global progress [0..1] landing squarely inside an active beat */
   globalProgress: number;
 }
 
+/**
+ * Total video duration is 30.00s (720 frames @ 24 fps):
+ *   Act I   (clip 0): frames 0..239   (240 frames, 00.00s..10.00s) -> g: 0.0000..0.3333
+ *   Act II  (clip 1): frames 240..525 (286 frames, 10.00s..21.92s) -> g: 0.3333..0.7306
+ *   Act III (clip 2): frames 526..719 (194 frames, 21.92s..30.00s) -> g: 0.7306..1.0000
+ */
+const CLIP1_BOUNDARY = 240 / 720; // 0.333333...
+const CLIP2_BOUNDARY = 526 / 720; // 0.730555...
+export const VIDEO_DURATION_SECONDS = 30.0;
+
 export const NAV_SCROLL_TARGETS: readonly NavScrollTarget[] = [
-  { id: 'act-studio', label: 'Studio', act: 0, globalProgress: 0.0 },
-  { id: 'act-works', label: 'Systems', act: 1, globalProgress: 0.352 },
-  { id: 'act-credentials', label: 'Credentials', act: 2, globalProgress: 0.698 },
+  { id: 'act-studio', label: 'Intro', act: 0, globalProgress: 0.0 },
+  { id: 'act-works', label: 'Systems', act: 1, globalProgress: 0.408 },
+  { id: 'act-credentials', label: 'Credentials', act: 2, globalProgress: 0.768 },
   { id: 'section-contact', label: 'Contact', act: 2, globalProgress: 0.985 },
 ];
 
 export const SECTION_PROGRESS_MAP: Record<string, number> = {
   'act-studio': 0.0,
-  'beat-hero': 0.081,
-  'act-works': 0.352,
-  'act-credentials': 0.698,
+  'beat-hero': 0.145,
+  'beat-identity': 0.145,
+  'beat-disciplines': 0.265,
+  'act-works': 0.408,
+  'beat-point-left': 0.478,
+  'beat-both-up': 0.542,
+  'beat-browse-works': 0.616,
+  'beat-point-upright': 0.700,
+  'act-credentials': 0.768,
+  'beat-double-right': 0.838,
+  'beat-navy-upright': 0.908,
   'section-contact': 0.985,
 };
 
 export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
+  return value < 0 ? 0 : value > 1 ? 1 : value;
 }
 
 export function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = clamp01((x - edge0) / Math.max(0.0001, edge1 - edge0));
+  if (edge1 === edge0) {
+    return x >= edge1 ? 1 : 0;
+  }
+  const t = clamp01((x - edge0) / (edge1 - edge0));
   return t * t * (3 - 2 * t);
 }
 
 /**
- * Computes active clip, optical dissolve blend alpha, and per-clip normalized
- * progress directly from global scroll ratio [0..1].
+ * Resolve continuous 720-frame timeline cleanly across 3 seamless contiguous acts.
+ * Zero crossfade blendAlpha is needed because clip1 -> clip2 -> clip3 are continuous cuts
+ * from the exact same 30s capture; secondaryClip purely pre-warms boundary frames.
  */
 export function resolveUnifiedTimeline(scrollY: number, maxScroll: number): ScrubFrameState {
-  const safeMax = Math.max(1, maxScroll);
-  const g = clamp01(scrollY / safeMax);
-
-  const p0 = clamp01(g / 0.335);
-  const p1 = clamp01((g - 0.32) / (0.68 - 0.32));
-  const p2 = clamp01((g - 0.665) / (1.0 - 0.665));
+  const g = clamp01(maxScroll > 0 ? scrollY / maxScroll : 0);
 
   let activeClip: 0 | 1 | 2 = 0;
   let secondaryClip: 0 | 1 | 2 | null = null;
-  let blendAlpha = 0;
+  let p0 = 0;
+  let p1 = 0;
+  let p2 = 0;
 
-  if (g < 0.32) {
+  if (g < CLIP1_BOUNDARY) {
     activeClip = 0;
-  } else if (g < 0.348) {
+    p0 = clamp01(g / CLIP1_BOUNDARY);
+  } else if (g < CLIP2_BOUNDARY) {
     activeClip = 1;
-    secondaryClip = 0;
-    blendAlpha = smoothstep(0.32, 0.348, g);
-  } else if (g < 0.665) {
-    activeClip = 1;
-  } else if (g < 0.692) {
-    activeClip = 2;
-    secondaryClip = 1;
-    blendAlpha = smoothstep(0.665, 0.692, g);
+    p0 = 1;
+    p1 = clamp01((g - CLIP1_BOUNDARY) / (CLIP2_BOUNDARY - CLIP1_BOUNDARY));
   } else {
     activeClip = 2;
+    p0 = 1;
+    p1 = 1;
+    p2 = clamp01((g - CLIP2_BOUNDARY) / (1 - CLIP2_BOUNDARY));
   }
 
   const clipProgress: [number, number, number] = [p0, p1, p2];
-  const totalFrames = CINEMA_CLIPS[activeClip].frameCount;
-  const frameIndex = Math.min(
-    totalFrames - 1,
-    Math.max(0, Math.round(clipProgress[activeClip] * (totalFrames - 1)))
-  );
+  const activeCount = CINEMA_CLIPS[activeClip].frameCount;
+  const activeP = clipProgress[activeClip];
+  const frameIndex = Math.min(activeCount - 1, Math.round(activeP * (activeCount - 1)));
+
+  // Anticipatory boundary pre-warm hint without double-exposure blending
+  if (activeClip === 0 && activeCount - frameIndex <= 18) {
+    secondaryClip = 1;
+  } else if (activeClip === 1 && activeCount - frameIndex <= 18) {
+    secondaryClip = 2;
+  }
 
   return {
     activeClip,
     secondaryClip,
-    blendAlpha,
+    blendAlpha: 0,
     clipProgress,
     frameIndex,
-    totalFrames,
+    totalFrames: activeCount,
     globalProgress: g,
   };
 }
 
 /**
- * Synchronizes unified CSS physics-spring beat phases (`before` / `active` / `after`) and
- * continuous scroll parallax drift without incremental line-by-line drip delays.
+ * Direct compositor-only DOM sync across all scroll-driven choreographed beat elements.
+ * Zero React re-renders during scroll frames.
  */
 export function applyBeatVisuals(
   state: ScrubFrameState,
   reducedMotion: boolean
 ): void {
-  const isJumping =
-    typeof document !== 'undefined' &&
-    document.documentElement.dataset.cinemaJumping === 'true';
-
-  const beatNodes = document.querySelectorAll<HTMLElement>('[data-cinema-beat]');
-  for (const el of beatNodes) {
-    const clip = Number(el.dataset.beatClip ?? '0') as 0 | 1 | 2;
+  const beats = document.querySelectorAll<HTMLElement>('[data-cinema-beat]');
+  for (let i = 0; i < beats.length; i++) {
+    const el = beats[i];
+    const clipIdx = Number(el.dataset.beatClip ?? '0') as 0 | 1 | 2;
     const inStart = Number(el.dataset.inStart ?? '0');
+    const inEnd = Number(el.dataset.inEnd ?? '0.1');
     const outStart = Number(el.dataset.outStart ?? '0.8');
-    const outEnd = Number(el.dataset.outEnd ?? '0.95');
+    const outEnd = Number(el.dataset.outEnd ?? '1');
     const holdStart = el.dataset.holdStart === 'true';
     const holdEnd = el.dataset.holdEnd === 'true';
 
-    const clipLocal = state.clipProgress[clip];
+    const p = state.clipProgress[clipIdx];
     const activeStart = holdStart ? -0.01 : inStart;
-    const activeEnd = holdEnd ? 1.01 : (outStart + outEnd) * 0.5;
+    const activeEnd = holdEnd ? 1.01 : outEnd;
 
-    let phase: 'before' | 'active' | 'after';
-    if (isJumping || state.activeClip !== clip) {
-      phase = clip < state.activeClip ? 'after' : 'before';
-    } else if (clipLocal < activeStart) {
+    let alpha = 0;
+    let phase: 'before' | 'active' | 'after' = 'before';
+
+    if (p < activeStart) {
+      alpha = 0;
       phase = 'before';
-    } else if (clipLocal >= activeEnd) {
+    } else if (p > activeEnd) {
+      alpha = 0;
       phase = 'after';
+    } else if (clipIdx !== state.activeClip) {
+      // Strictly gate beats to their owning continuous segment so neighboring clips never bleed
+      alpha = 0;
+      phase = clipIdx > state.activeClip ? 'before' : 'after';
     } else {
-      phase = 'active';
+      const enterAlpha = holdStart ? 1 : smoothstep(inStart, inEnd, p);
+      const exitAlpha = holdEnd ? 1 : 1 - smoothstep(outStart, outEnd, p);
+      alpha = clamp01(Math.min(enterAlpha, exitAlpha));
+      phase = alpha > 0.08 ? 'active' : p < (inStart + outEnd) * 0.5 ? 'before' : 'after';
     }
 
-    if (el.dataset.beatPhase !== phase) {
-      el.dataset.beatPhase = phase;
-    }
+    const mid = (inEnd + outStart) * 0.5;
+    const halfSpan = Math.max(0.05, (outEnd - inStart) * 0.5);
+    const centeredU = clamp01(((p - mid) / halfSpan) * 0.5 + 0.5) * 2 - 1;
 
-    if (phase === 'active') {
-      const spanStart = Math.max(0, activeStart);
-      const u = clamp01((clipLocal - spanStart) / Math.max(0.01, activeEnd - spanStart));
-      const centeredU = u - 0.5;
-      const parallaxY = reducedMotion ? 0 : -centeredU * 16;
+    if (alpha > 0.005) {
+      el.style.opacity = alpha.toFixed(4);
       el.style.setProperty('--beat-u', reducedMotion ? '0' : centeredU.toFixed(4));
-      el.style.transform = reducedMotion
-        ? 'none'
-        : `translate3d(0, ${parallaxY.toFixed(2)}px, 0)`;
-      el.removeAttribute('aria-hidden');
+      el.style.visibility = 'visible';
+      el.dataset.beatPhase = phase;
     } else {
-      el.style.setProperty('--beat-u', '0');
-      el.style.transform = reducedMotion ? 'none' : 'translate3d(0, 0, 0)';
-      el.setAttribute('aria-hidden', 'true');
+      el.style.opacity = '0';
+      el.style.setProperty('--beat-u', phase === 'before' ? '-1' : '1');
+      el.style.visibility = 'hidden';
+      el.dataset.beatPhase = phase;
     }
   }
 }
@@ -162,6 +200,7 @@ export function beatDataAttrs(spec: BeatTimingSpec): Record<string, string> {
     'data-in-end': String(spec.inEnd),
     'data-out-start': String(spec.outStart),
     'data-out-end': String(spec.outEnd),
+    ...(spec.gesture ? { 'data-gesture': spec.gesture } : {}),
     ...(spec.holdStart ? { 'data-hold-start': 'true' } : {}),
     ...(spec.holdEnd ? { 'data-hold-end': 'true' } : {}),
   };

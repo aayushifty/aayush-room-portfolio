@@ -69,7 +69,13 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
       const subtleDrift = reducedMotionRef.current
         ? 1.0
-        : 1.0 + state.clipProgress[state.activeClip] * 0.032;
+        : 1.0 + Math.sin(state.globalProgress * Math.PI) * 0.018;
+
+      if (state.secondaryClip !== null) {
+        // Pre-warm boundary frames of the upcoming continuous segment before scroll arrives
+        store.getBestBitmap(state.secondaryClip, 0);
+        store.getBestBitmap(state.secondaryClip, 2);
+      }
 
       if (state.secondaryClip !== null && state.blendAlpha > 0 && state.blendAlpha < 1) {
         const outClip = state.secondaryClip;
@@ -261,7 +267,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         width={1280}
         height={720}
         fetchPriority="high"
-        className="absolute inset-0 h-full w-full object-cover object-[50%_38%]"
+        className="absolute inset-0 h-full w-full object-cover object-[50%_24%]"
       />
       <canvas
         ref={canvasRef}
@@ -271,12 +277,12 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       {/* CSS Scroll-Driven Atmospheric Rim Aura (composited on modern engines) */}
       <div className="cinema-scroll-aura pointer-events-none absolute inset-0" />
 
-      {/* Ultra-light perimeter framing keeping the solo 3D image open and borderless */}
+      {/* Feathered side breathing room keeping center column open while grounding flank copy */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(90deg, rgba(6,8,13,0.24) 0%, rgba(6,8,13,0.06) 20%, rgba(6,8,13,0) 38%, rgba(6,8,13,0) 62%, rgba(6,8,13,0.06) 80%, rgba(6,8,13,0.24) 100%)',
+            'linear-gradient(90deg, rgba(6,8,13,0.42) 0%, rgba(6,8,13,0.14) 20%, rgba(6,8,13,0) 36%, rgba(6,8,13,0) 64%, rgba(6,8,13,0.14) 80%, rgba(6,8,13,0.42) 100%)',
         }}
       />
 
@@ -285,7 +291,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(6,8,13,0.34) 0%, rgba(6,8,13,0) 14%, rgba(6,8,13,0) 80%, rgba(6,8,13,0.38) 100%)',
+            'linear-gradient(180deg, rgba(6,8,13,0.34) 0%, rgba(6,8,13,0) 14%, rgba(6,8,13,0) 76%, rgba(6,8,13,0.48) 100%)',
         }}
       />
 
