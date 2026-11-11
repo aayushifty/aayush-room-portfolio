@@ -106,16 +106,27 @@ export default function App(): React.ReactElement {
   const startPlaybackFrom = useCallback((startSec: number) => {
     const audio = audioRef.current;
     if (audio) {
-      try {
-        audio.currentTime = startSec;
-        const playPromise = audio.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => {
-            // Browser blocked audio output — timer clock fallback keeps visual playback active
-          });
+      const beginAudio = (): void => {
+        try {
+          if (Math.abs(audio.currentTime - startSec) > 0.05) {
+            audio.currentTime = startSec;
+          }
+          const playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {
+              // Browser blocked audio output — timer clock fallback keeps visual playback active
+            });
+          }
+        } catch {
+          // Ignore seek error before metadata loads; rAF clock advances smoothly
         }
-      } catch {
-        // Ignore seek error before metadata loads; rAF clock advances smoothly
+      };
+
+      if (audio.readyState >= 1) {
+        beginAudio();
+      } else {
+        audio.addEventListener('loadedmetadata', beginAudio, { once: true });
+        audio.load();
       }
     }
     setIsAutoPlaying(true);
@@ -328,7 +339,7 @@ export default function App(): React.ReactElement {
       <audio
         ref={audioRef}
         src="/audio/intro-reel.m4a"
-        preload="metadata"
+        preload="none"
         playsInline
         className="hidden"
       />

@@ -12,10 +12,16 @@ export interface ScrubFrameState {
 
 type ClipIndex = 0 | 1 | 2;
 
-const MAX_DECODED_WINDOW = 42;
-const KEYFRAME_STRIDE = 24;
-const MAX_CONCURRENT_FETCHES = 3;
+const MAX_DECODED_WINDOW = 28;
+const KEYFRAME_STRIDE = 32;
+const MAX_CONCURRENT_FETCHES = 6;
 const MAX_FETCH_ATTEMPTS = 2;
+
+interface FrameTask {
+  clip: ClipIndex;
+  frame: number;
+  pin: boolean;
+}
 
 function padFrame(indexOneBased: number): string {
   return String(indexOneBased).padStart(3, '0');
@@ -36,8 +42,9 @@ function getFrameUrl(clipIndex: ClipIndex, frameIdxZeroBased: number): string {
 export class FrameSequenceStore {
   private blobs: Map<string, Blob> = new Map();
   private inFlightFetch: Set<string> = new Set();
-  private urgentQueue: Array<{ clip: ClipIndex; frame: number; pin: boolean }> = [];
-  private queuedKeys: Set<string> = new Set();
+  private focusQueue: FrameTask[] = [];
+  private anchorQueue: FrameTask[] = [];
+  private queuedAnchors: Set<string> = new Set();
   private bitmaps: Map<string, ImageBitmap> = new Map();
   private pinnedBitmaps: Map<string, ImageBitmap> = new Map();
   private inFlightDecode: Set<string> = new Set();
@@ -68,7 +75,7 @@ export class FrameSequenceStore {
   public setFocus(clip: ClipIndex, frame: number): void {
     this.priorityClip = clip;
     this.priorityFrame = frame;
-    this.enqueueFocusWindow(clip, frame, 14);
+    this.rebuildFocusQueue(clip, frame, 4);
     this.schedulePump();
   }
 
@@ -77,24 +84,33 @@ export class FrameSequenceStore {
     this.active = true;
     this.pumpRunning = false;
     this.pumpScheduled = false;
-    this.urgentQueue = [];
-    this.queuedKeys.clear();
+    this.focusQueue = [];
+    this.anchorQueue = [];
+    this.queuedAnchors.clear();
     this.inFlightFetch.clear();
     this.inFlightDecode.clear();
     this.failedAttempts.clear();
     this.lastFailureAt.clear();
 
-    // Prioritize anchor frame 0 of each clip, deferring background scrub preload cleanly
-    this.enqueueFrame(0, 0, true, true);
-    this.enqueueFrame(1, 0, true, true);
-    this.enqueueFrame(2, 0, true, true);
+    // Queue hero opening frames for all 3 acts + closing finale first so every scroll zone renders cleanly within RTT #1
+    const criticalAnchors: Array<[ClipIndex, number]> = [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [1, Math.min(64, CINEMA_CLIPS[1].frameCount - 1)],
+      [2, Math.min(48, CINEMA_CLIPS[2].frameCount - 1)],
+      [2, CINEMA_CLIPS[2].frameCount - 1],
+    ];
+    for (const [c, f] of criticalAnchors) {
+      this.enqueueAnchor(c, f, true);
+    }
 
     for (let c = 0 as ClipIndex; c <= 2; c = (c + 1) as ClipIndex) {
       const total = CINEMA_CLIPS[c].frameCount;
       for (let f = 0; f < total; f += KEYFRAME_STRIDE) {
-        this.enqueueFrame(c, f, true, false);
+        this.enqueueAnchor(c, f, true);
       }
-      this.enqueueFrame(c, total - 1, true, false);
+      this.enqueueAnchor(c, total - 1, true);
     }
 
     this.schedulePump();
@@ -113,8 +129,8 @@ export class FrameSequenceStore {
 
     if (this.blobs.has(exactKey)) {
       void this.decodeCachedBlob(clip, targetFrame, false);
-    } else {
-      this.enqueueFrame(clip, targetFrame, false, true);
+    } else if (this.active) {
+      this.enqueueImmediateFocus(clip, targetFrame, false);
       this.schedulePump();
     }
 
@@ -163,7 +179,7 @@ export class FrameSequenceStore {
     return true;
   }
 
-  private enqueueFrame(clip: ClipIndex, frame: number, pin: boolean, front: boolean): void {
+  private enqueueAnchor(clip: ClipIndex, frame: number, pin: boolean): void {
     if (!this.active) return;
     const total = CINEMA_CLIPS[clip].frameCount;
     if (frame < 0 || frame >= total) return;
@@ -174,28 +190,52 @@ export class FrameSequenceStore {
       void this.decodeCachedBlob(clip, frame, pin);
       return;
     }
-    if (!this.canFetchKey(key) || this.queuedKeys.has(key)) return;
+    if (!this.canFetchKey(key) || this.queuedAnchors.has(key)) return;
 
-    this.queuedKeys.add(key);
-    const task = { clip, frame, pin };
-    if (front) {
-      this.urgentQueue.unshift(task);
-    } else {
-      this.urgentQueue.push(task);
+    this.queuedAnchors.add(key);
+    this.anchorQueue.push({ clip, frame, pin });
+  }
+
+  private enqueueImmediateFocus(clip: ClipIndex, frame: number, pin: boolean): void {
+    if (!this.active) return;
+    const total = CINEMA_CLIPS[clip].frameCount;
+    if (frame < 0 || frame >= total) return;
+
+    const key = `${clip}:${frame}`;
+    if (this.bitmaps.has(key) || this.pinnedBitmaps.has(key) || !this.canFetchKey(key)) return;
+    if (!this.focusQueue.some((item) => item.clip === clip && item.frame === frame)) {
+      this.focusQueue.unshift({ clip, frame, pin });
     }
   }
 
-  private enqueueFocusWindow(clip: ClipIndex, centerFrame: number, radius: number): void {
-    // Trim stale urgent lookahead so fast scrolling prioritizes the current viewport region
-    if (this.urgentQueue.length > 72) {
-      this.urgentQueue.length = 24;
-      this.queuedKeys = new Set(this.urgentQueue.map((item) => `${item.clip}:${item.frame}`));
+  private rebuildFocusQueue(clip: ClipIndex, centerFrame: number, radius: number): void {
+    const nextQueue: FrameTask[] = [];
+    const seen = new Set<string>();
+    const total = CINEMA_CLIPS[clip].frameCount;
+
+    const tryPush = (f: number): void => {
+      if (f < 0 || f >= total) return;
+      const key = `${clip}:${f}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      if (this.bitmaps.has(key) || this.pinnedBitmaps.has(key)) return;
+      if (this.blobs.has(key)) {
+        void this.decodeCachedBlob(clip, f, false);
+        return;
+      }
+      if (this.canFetchKey(key)) {
+        nextQueue.push({ clip, frame: f, pin: false });
+      }
+    };
+
+    tryPush(centerFrame);
+    for (let offset = 1; offset <= radius; offset++) {
+      tryPush(centerFrame + offset);
+      tryPush(centerFrame - offset);
     }
-    for (let offset = radius; offset >= 1; offset--) {
-      this.enqueueFrame(clip, centerFrame - offset, false, true);
-      this.enqueueFrame(clip, centerFrame + offset, false, true);
-    }
-    this.enqueueFrame(clip, centerFrame, false, true);
+
+    // Replace stale scroll lookahead cleanly so instant jumps fetch current frames immediately
+    this.focusQueue = nextQueue;
   }
 
   private async decodeCachedBlob(clip: ClipIndex, frame: number, pin: boolean): Promise<void> {
@@ -218,7 +258,7 @@ export class FrameSequenceStore {
       } else {
         this.insertLruBitmap(key, bitmap);
       }
-      if (clip === this.priorityClip && Math.abs(frame - this.priorityFrame) <= 16) {
+      if (clip === this.priorityClip && (pin || Math.abs(frame - this.priorityFrame) <= 16)) {
         this.notify();
       }
     } catch {
@@ -293,13 +333,13 @@ export class FrameSequenceStore {
     }, 16);
   }
 
-  private buildNextBgBatch(limit: number): Array<{ clip: ClipIndex; frame: number; pin: boolean }> {
+  private buildNextBgBatch(limit: number): FrameTask[] {
     const clipOrder: ClipIndex[] = [
       this.priorityClip,
       ((this.priorityClip + 1) % 3) as ClipIndex,
       ((this.priorityClip + 2) % 3) as ClipIndex,
     ];
-    const batch: Array<{ clip: ClipIndex; frame: number; pin: boolean }> = [];
+    const batch: FrameTask[] = [];
 
     for (const c of clipOrder) {
       const total = CINEMA_CLIPS[c].frameCount;
@@ -309,14 +349,14 @@ export class FrameSequenceStore {
         const down = center - d;
         if (up < total) {
           const k = `${c}:${up}`;
-          if (this.canFetchKey(k) && !this.queuedKeys.has(k)) {
+          if (this.canFetchKey(k) && !this.queuedAnchors.has(k)) {
             batch.push({ clip: c, frame: up, pin: false });
             if (batch.length >= limit) return batch;
           }
         }
         if (d > 0 && down >= 0) {
           const k = `${c}:${down}`;
-          if (this.canFetchKey(k) && !this.queuedKeys.has(k)) {
+          if (this.canFetchKey(k) && !this.queuedAnchors.has(k)) {
             batch.push({ clip: c, frame: down, pin: false });
             if (batch.length >= limit) return batch;
           }
@@ -332,18 +372,49 @@ export class FrameSequenceStore {
     this.pumpRunning = true;
 
     let bgCursor = 0;
-    let bgBatch: Array<{ clip: ClipIndex; frame: number; pin: boolean }> = [];
+    let bgBatch: FrameTask[] = [];
+    let lastBgClip: ClipIndex = this.priorityClip;
 
-    const takeNext = (): { item: { clip: ClipIndex; frame: number; pin: boolean }; urgent: boolean } | null => {
-      while (this.urgentQueue.length > 0) {
-        const next = this.urgentQueue.shift()!;
+    const shiftValidFocus = (): { item: FrameTask; urgent: boolean } | null => {
+      while (this.focusQueue.length > 0) {
+        const next = this.focusQueue.shift()!;
         const key = `${next.clip}:${next.frame}`;
-        this.queuedKeys.delete(key);
         if (this.canFetchKey(key)) {
           return { item: next, urgent: true };
         }
       }
-      if (bgCursor >= bgBatch.length) {
+      return null;
+    };
+
+    const shiftValidAnchor = (): { item: FrameTask; urgent: boolean } | null => {
+      while (this.anchorQueue.length > 0) {
+        const next = this.anchorQueue.shift()!;
+        const key = `${next.clip}:${next.frame}`;
+        this.queuedAnchors.delete(key);
+        if (this.canFetchKey(key)) {
+          return { item: next, urgent: true };
+        }
+      }
+      return null;
+    };
+
+    const takeNext = (): { item: FrameTask; urgent: boolean } | null => {
+      // On initial top view, land cross-act hero anchors first so any scroll jump has an immediate frame
+      const atInitialRest = this.priorityClip === 0 && this.priorityFrame <= 2;
+      if (atInitialRest) {
+        const heroAnchor = shiftValidAnchor();
+        if (heroAnchor) return heroAnchor;
+        const focusJob = shiftValidFocus();
+        if (focusJob) return focusJob;
+      } else {
+        const focusJob = shiftValidFocus();
+        if (focusJob) return focusJob;
+        const heroAnchor = shiftValidAnchor();
+        if (heroAnchor) return heroAnchor;
+      }
+
+      if (lastBgClip !== this.priorityClip || bgCursor >= bgBatch.length) {
+        lastBgClip = this.priorityClip;
         bgBatch = this.buildNextBgBatch(24);
         bgCursor = 0;
       }
@@ -364,7 +435,7 @@ export class FrameSequenceStore {
           if (!job) break;
           await this.fetchAndDecode(job.item.clip, job.item.frame, job.item.pin);
           if (!job.urgent && this.active && sid === this.sessionId) {
-            await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 24));
           }
         }
       };
@@ -381,8 +452,9 @@ export class FrameSequenceStore {
     this.active = false;
     this.pumpRunning = false;
     this.sessionId += 1;
-    this.urgentQueue = [];
-    this.queuedKeys.clear();
+    this.focusQueue = [];
+    this.anchorQueue = [];
+    this.queuedAnchors.clear();
     this.inFlightFetch.clear();
     this.inFlightDecode.clear();
     this.failedAttempts.clear();
