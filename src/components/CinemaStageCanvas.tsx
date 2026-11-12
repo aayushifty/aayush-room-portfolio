@@ -4,6 +4,7 @@ import {
   pickReelUrl,
   pickUpgradeUrl,
 } from '@/lib/frameScrubEngine';
+import { restTime } from '@/lib/restFrames';
 import { applyFingertips } from '@/lib/fingertips';
 import {
   applyBeatVisuals,
@@ -49,6 +50,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
     let rafId: number | null = null;
     let watchdogTimer: number | null = null;
+    let restTimer: number | null = null;
     let revealFallbackTimer: number | null = null;
     let seekStartedAt = 0;
     let hasFirstFrame = false;
@@ -268,10 +270,33 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       frameCallbackId = video.requestVideoFrameCallback(onFramePresented);
     }
 
+    // Frames caught mid-gesture are motion-blurred in the footage. When scrolling stops on one,
+    // the film eases on to the nearest calm frame (restAt) and waits there until the scroll
+    // position passes it, so a held picture is always a sharp one.
+    let lastRaw = -1;
+    let restAt = -1;
+    const settleOnRest = (): void => {
+      restTimer = null;
+      const r = Math.min(getDuration() - 0.01, restTime(lastRaw));
+      if (Math.abs(r - lastRaw) < 0.02) return;
+      restAt = r;
+      desiredTimeRef.current = r;
+      drive();
+    };
+
     const syncTimeline = (): void => {
       const state = resolveUnifiedTimeline(window.scrollY, maxScrollRef.current);
       const dur = getDuration();
-      desiredTimeRef.current = Math.max(0, Math.min(dur - 0.01, state.globalProgress * dur));
+      const raw = Math.max(0, Math.min(dur - 0.01, state.globalProgress * dur));
+      if (Math.abs(raw - lastRaw) > 0.004) {
+        const forward = raw > lastRaw;
+        lastRaw = raw;
+        // keep waiting only while the scroll is still heading toward the rest frame
+        if (restAt >= 0 && forward !== raw < restAt) restAt = -1;
+        if (restTimer !== null) window.clearTimeout(restTimer);
+        restTimer = window.setTimeout(settleOnRest, 180);
+      }
+      desiredTimeRef.current = restAt >= 0 ? restAt : raw;
 
       drive();
 
@@ -393,6 +418,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     return () => {
       abortCtrl.abort();
       if (watchdogTimer !== null) window.clearTimeout(watchdogTimer);
+      if (restTimer !== null) window.clearTimeout(restTimer);
       if (revealFallbackTimer !== null) window.clearTimeout(revealFallbackTimer);
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if (ptrRafId !== null) window.cancelAnimationFrame(ptrRafId);
