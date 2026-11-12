@@ -29,7 +29,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
   const stageBoxRef = useRef<HTMLDivElement | null>(null);
   const posterRef = useRef<HTMLImageElement | null>(null);
   const latchRef = useRef<HTMLCanvasElement | null>(null);
-  const videoLayerRef = useRef<HTMLDivElement | null>(null);
   const lastActRef = useRef<0 | 1 | 2>(0);
   const maxScrollRef = useRef<number>(6000);
   const desiredTimeRef = useRef<number>(0);
@@ -47,7 +46,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     if (!video) return;
 
     const posterImg = posterRef.current;
-    const videoLayer = videoLayerRef.current;
 
     let rafId: number | null = null;
     let watchdogTimer: number | null = null;
@@ -219,6 +217,20 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
     };
 
+    // Scrolling forward PLAYS the reel toward the scroll position, sped up to catch it, so the
+    // decoder presents every frame in order. Seeking each scroll step re-decodes from the last
+    // keyframe every time (23-110 ms measured), which showed about 1 frame in 5 under a wheel.
+    // Seeks remain for scrolling back, long jumps, and landing on the exact frame at rest.
+    const drive = (): void => {
+      const ahead = desiredTimeRef.current - video.currentTime;
+      if (!reducedMotionRef.current && video.readyState >= 2 && !video.seeking && ahead > 0.06 && ahead < 4) {
+        video.playbackRate = Math.min(2.5, Math.max(0.75, ahead * 3));
+        if (video.paused) void video.play().catch(flushSeek);
+        return;
+      }
+      flushSeek();
+    };
+
     // Media time of the frame currently on screen (-1 until the first frame is presented).
     // Text is painted from this, not from the scroll target: during a fast scroll the decoder
     // lags a few frames, and text driven by scroll would run ahead of the hand in the picture.
@@ -230,7 +242,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       // Lock text to the rendered video frame during active scrubbing, but never freeze
       // overlays behind scroll if the decoder falls >0.75s behind or has not jumped yet.
       const t =
-        shownTime >= 0 && Math.abs(target - shownTime) <= 0.75
+        shownTime >= 0 && (!video.paused || Math.abs(target - shownTime) <= 0.75)
           ? shownTime
           : target;
       const state = resolveUnifiedTimeline(t / getDuration(), 1);
@@ -249,6 +261,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     const onFramePresented = (_now: number, meta: VideoFrameCallbackMetadata): void => {
       shownTime = meta.mediaTime;
       paintOverlays();
+      if (!video.paused) drive();
       frameCallbackId = video.requestVideoFrameCallback(onFramePresented);
     };
     if ('requestVideoFrameCallback' in video) {
@@ -260,14 +273,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       const dur = getDuration();
       desiredTimeRef.current = Math.max(0, Math.min(dur - 0.01, state.globalProgress * dur));
 
-      if (videoLayer && !reducedMotionRef.current) {
-        const drift = 1 + Math.sin(state.globalProgress * Math.PI) * 0.006;
-        videoLayer.style.transform = `translate3d(0, 0, 0) scale(${drift.toFixed(4)})`;
-      } else if (videoLayer) {
-        videoLayer.style.transform = 'none';
-      }
-
-      flushSeek();
+      drive();
 
       paintOverlays();
       onScrollProgressRef.current?.(state.globalProgress);
@@ -300,20 +306,22 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       // also covers browsers without requestVideoFrameCallback and hidden tabs where it does not fire
       shownTime = video.currentTime;
       paintOverlays();
-      flushSeek();
+      drive();
     };
 
     const onCanPlay = (): void => {
       if (Math.abs(video.currentTime - desiredTimeRef.current) <= 0.35 || desiredTimeRef.current <= 0.15) {
         revealVideo();
       }
-      flushSeek();
+      drive();
     };
 
     video.addEventListener('loadedmetadata', flushSeek);
     video.addEventListener('loadeddata', onLoadedData);
     video.addEventListener('canplay', onCanPlay);
     video.addEventListener('seeked', onSeeked);
+    // if the browser pauses playback itself (hidden tab, power saving), still land on the exact frame
+    video.addEventListener('pause', flushSeek);
 
     revealFallbackTimer = window.setTimeout(() => {
       if (video.readyState >= 2) {
@@ -394,6 +402,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       video.removeEventListener('loadeddata', onLoadedData);
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('pause', flushSeek);
       if (frameCallbackId) video.cancelVideoFrameCallback(frameCallbackId);
       window.removeEventListener('scroll', scheduleSync);
       window.removeEventListener('resize', scheduleSync);
@@ -422,7 +431,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       />
 
       <div
-        ref={videoLayerRef}
         className="absolute inset-0 h-full w-full origin-[50%_24%]"
       >
         <video
