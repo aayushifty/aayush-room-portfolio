@@ -2,8 +2,8 @@
 /**
  * Index-fingertip positions read off the reel at 4 samples per second.
  * Each sample is [seconds, x, y] with x/y as fractions of the 16:9 video frame.
- * Blocks tagged data-tip="<name>" are pinned to the interpolated point, so the text
- * rises, holds and drops with the hand.
+ * Blocks tagged data-tip="<name>" settle beside the point where the finger holds;
+ * the spark follows the interpolated fingertip frame by frame.
  */
 type Sample = readonly [t: number, x: number, y: number];
 
@@ -71,7 +71,7 @@ export function applyFingertips(t: number): void {
     if (section.style.visibility === 'hidden') continue;
 
     const anchors = section.querySelectorAll<HTMLElement>('.gs-tip');
-    const placed: Array<{ el: HTMLElement; sx: number; sy: number; room: number; fit: Fit; tight: boolean }> = [];
+    const placed: Array<{ el: HTMLElement; sx: number; sy: number; hx: number; hy: number; room: number; fit: Fit; tight: boolean }> = [];
     let anyDock = false;
 
     for (let i = 0; i < anchors.length; i++) {
@@ -89,7 +89,7 @@ export function applyFingertips(t: number): void {
       const fit: Fit = W < 700 || hx <= 0 || hx >= W ? 'dock' : room >= 190 ? 'beside' : 'above';
       if (fit === 'dock') anyDock = true;
       // tight: too little space between the top bar and the finger to stack a block over the hand
-      placed.push({ el, sx, sy, room, fit, tight: fit === 'above' && hy - 48 < 200 });
+      placed.push({ el, sx, sy, hx, hy, room, fit, tight: fit === 'above' && hy - 48 < 200 });
     }
 
     const dock = anyDock ? String(placed.length) : '';
@@ -104,14 +104,17 @@ export function applyFingertips(t: number): void {
       // text runs away from the finger when beside it, and hugs the screen edge when stacked above
       const text = fit === 'dock' ? 'start' : (fit === 'beside') === isLeft ? 'end' : 'start';
       const spark = p.el.nextElementSibling as HTMLElement | null;
-      for (const node of [p.el, spark]) {
-        if (!node) continue;
-        node.style.setProperty('--fx', `${p.sx.toFixed(1)}px`);
-        node.style.setProperty('--fxr', `${(W - p.sx).toFixed(1)}px`);
-        node.style.setProperty('--fy', `${p.sy.toFixed(1)}px`);
-        node.style.setProperty('--fyb', `${(H - p.sy).toFixed(1)}px`);
+      // text settles where the finger holds and stays put; the spark rides the live fingertip
+      const pin = (node: HTMLElement | null, x: number, y: number): void => {
+        if (!node) return;
+        node.style.setProperty('--fx', `${x.toFixed(1)}px`);
+        node.style.setProperty('--fxr', `${(W - x).toFixed(1)}px`);
+        node.style.setProperty('--fy', `${y.toFixed(1)}px`);
+        node.style.setProperty('--fyb', `${(H - y).toFixed(1)}px`);
         if (node.dataset.fit !== fit) node.dataset.fit = fit;
-      }
+      };
+      pin(p.el, p.hx, p.hy);
+      pin(spark, p.sx, p.sy);
       p.el.style.setProperty('--room', `${Math.max(0, p.room).toFixed(0)}px`);
       p.el.style.setProperty('--gap', `${gap.toFixed(0)}px`);
       if (p.el.dataset.text !== text) p.el.dataset.text = text;

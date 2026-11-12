@@ -34,12 +34,18 @@ export const VIDEO_DURATION_SECONDS = 30;
 export function span(
   t0: number,
   t1: number,
-  opts: Pick<BeatTimingSpec, 'gesture' | 'holdStart' | 'holdEnd'> = {}
+  opts: Pick<BeatTimingSpec, 'gesture' | 'holdStart' | 'holdEnd'> & {
+    /** second the block is fully formed (default: a short fade after t0) */
+    formed?: number;
+    /** second it starts to break up (default: a short fade before t1) */
+    fading?: number;
+  } = {}
 ): BeatTimingSpec {
   const clip = Math.min(2, Math.floor(t0 / ACT_SECONDS)) as 0 | 1 | 2;
   const p = (t: number): number => Number(((t - clip * ACT_SECONDS) / ACT_SECONDS).toFixed(4));
   const fade = Math.min(0.3, (t1 - t0) / 3);
-  return { clip, inStart: p(t0), inEnd: p(t0 + fade), outStart: p(t1 - fade), outEnd: p(t1), ...opts };
+  const { formed = t0 + fade, fading = t1 - fade, ...rest } = opts;
+  return { clip, inStart: p(t0), inEnd: p(formed), outStart: p(fading), outEnd: p(t1), ...rest };
 }
 
 export const NAV_SCROLL_TARGETS: readonly NavScrollTarget[] = [

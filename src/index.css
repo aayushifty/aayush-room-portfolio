@@ -390,156 +390,6 @@
       opacity 0.44s var(--ease-expo-out) 0.14s,
       visibility 0s linear 0s;
   }
-
-  [data-cinema-beat] [data-beat-stage] {
-    opacity: 0;
-    transform: translate3d(0, 18px, 0) scale(0.975);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-    backface-visibility: hidden;
-  }
-
-  [data-cinema-beat][data-align='left'] [data-beat-stage] {
-    transform: translate3d(22px, 10px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='right'] [data-beat-stage] {
-    transform: translate3d(-22px, 10px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='bottom'] [data-beat-stage] {
-    transform: translate3d(0, 18px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-gesture='point-down'] [data-beat-stage] {
-    transform: translate3d(0, -16px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-gesture='point-upright'] [data-beat-stage],
-  [data-cinema-beat][data-gesture='navy-upright'] [data-beat-stage] {
-    transform: translate3d(-20px, 18px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='split'] [data-beat-stage] > :first-child {
-    transform: translate3d(20px, 0, 0);
-    transition: transform 0.65s var(--ease-spring) 0.08s;
-  }
-
-  [data-cinema-beat][data-align='split'] [data-beat-stage] > :last-child {
-    transform: translate3d(-20px, 0, 0);
-    transition: transform 0.65s var(--ease-spring) 0.08s;
-  }
-
-  [data-cinema-beat][data-align='split'][data-beat-phase='active'] [data-beat-stage] > :first-child,
-  [data-cinema-beat][data-align='split'][data-beat-phase='active'] [data-beat-stage] > :last-child {
-    transform: translate3d(0, 0, 0);
-  }
-
-  /* Word-by-word subtitle entrance for opening greeting ("Hi, I'm Aayush.") */
-  [data-cinema-beat] .cinema-word-reveal {
-    display: inline-block;
-    opacity: 0;
-    transform: translate3d(0, 14px, 0);
-    transition:
-      opacity 0.22s ease-out,
-      transform 0.28s var(--ease-expo-out);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-reveal {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.45s var(--ease-expo-out) 0.05s,
-      transform 0.65s var(--ease-spring) 0.05s;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-delay-1 {
-    transition-delay: 0.15s;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-delay-2 {
-    transition-delay: 0.25s;
-  }
-
-  [data-cinema-beat][data-beat-phase='after'] [data-beat-stage] {
-    opacity: 0;
-    transform: translate3d(0, -14px, 0) scale(0.985);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] [data-beat-stage] {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    will-change: opacity, transform;
-    transition:
-      opacity 0.44s var(--ease-expo-out) 0.14s,
-      transform 0.72s var(--ease-spring) 0.08s;
-  }
-
-  /* Slanted anamorphic mask wipe for display headlines without continuous transition restarts */
-  [data-cinema-beat] .cinema-display-title {
-    clip-path: polygon(0 100%, 100% 88%, 100% 100%, 0 100%);
-    transform: translate3d(0, 12px, 0);
-    transition:
-      clip-path 0.18s ease-out,
-      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-display-title {
-    clip-path: polygon(-6% -18%, 108% -18%, 108% 124%, -6% 124%);
-    transform: translate3d(0, 0, 0);
-    transition:
-      clip-path 0.6s var(--ease-expo-out) 0.09s,
-      transform 0.68s var(--ease-spring) 0.09s;
-  }
-
-  [data-cinema-beat] .cinema-kicker {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.2s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-kicker {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.4s var(--ease-expo-out) 0.12s,
-      transform 0.56s var(--ease-spring) 0.1s;
-  }
-
-  [data-cinema-beat] .cinema-subtitle {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.2s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-subtitle {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.44s var(--ease-expo-out) 0.16s,
-      transform 0.6s var(--ease-spring) 0.14s;
-  }
-
-  [data-cinema-beat] .cinema-accent-beam {
-    transform: scaleX(0);
-    opacity: 0;
-    transition:
-      transform 0.18s ease-out,
-      opacity 0.14s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-accent-beam {
-    transform: scaleX(1);
-    opacity: 1;
-    transition:
-      transform 0.62s var(--ease-spring) 0.16s,
-      opacity 0.34s ease-out 0.14s;
-  }
 }
 
 /* Scoped Component View Transitions for Category Filter & Tab Spotlights */
@@ -896,20 +746,6 @@ dialog.dossier-dialog::backdrop {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-cinema-beat] .gs-index {
-    opacity: 0;
-    translate: 0 16px;
-    transition: opacity 0.14s ease-out, translate 0.2s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .gs-index {
-    opacity: 0.75;
-    translate: 0 0;
-    transition:
-      opacity 0.5s var(--ease-expo-out) 0.04s,
-      translate 0.7s var(--ease-spring) 0.04s;
-  }
-
   /* A hairline shoots from the fingertip to the block when he points */
   .gs-side[data-trace]::after {
     content: '';
@@ -1142,28 +978,7 @@ dialog.dossier-dialog::backdrop {
   display: none;
 }
 
-/* Letter-by-letter headlines */
-.gs-w {
-  display: inline-block;
-  white-space: nowrap;
-}
-
-.gs-c {
-  display: inline-block;
-}
-
-/* The letter reveal replaces the old slanted wipe on headlines */
-.gs-beat[data-cinema-beat] .cinema-display-title {
-  clip-path: none;
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  /* Blocks grow out of the fingertip and fall back into it, scrubbed by scroll (--beat-a 0..1) */
-  .gs-tip:not([data-fit='dock']) > [data-beat-stage] {
-    scale: calc(0.3 + 0.7 * var(--beat-a, 1));
-    transform-origin: var(--origin, 50% 50%);
-  }
-
   /* Hairline from the finger to the block */
   .gs-tip[data-fit='beside']::after {
     content: '';
@@ -1199,33 +1014,27 @@ dialog.dossier-dialog::backdrop {
     transition: scale 0.45s var(--ease-expo-out), opacity 0.25s ease-out;
   }
 
-  .gs-spark::after {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 50%;
-    border: 1.5px solid var(--gs-accent);
-    animation: gs-ping 1.5s var(--ease-expo-out) infinite;
-  }
-
-  /* Letters assemble from scattered particles and disperse again, scrubbed by scroll (--beat-a 0..1) */
-  [data-cinema-beat] .gs-c {
-    --k: calc(1 - var(--beat-a, 1));
-    translate: calc(var(--dx) * var(--k)) calc(var(--dy) * var(--k));
-    rotate: calc(var(--r) * var(--k));
-    scale: calc(1 - 0.65 * var(--k));
-    filter: blur(calc(var(--k) * 8px));
-  }
 }
 
-@keyframes gs-ping {
-  from {
-    scale: 0.3;
-    opacity: 0.9;
-  }
+/* ── In-place dot formation ───────────────────────────────────────────────────────────────────
+   Text forms where it stands out of fine dots and breaks back into dots: two offset dot grids
+   whose dots swell with --beat-a (0..1) until they merge into solid type. Nothing moves.
+   --beat-a is scrubbed by scroll, so a block forms as the hand rises and thins out over the
+   whole time the hand takes to lower. */
+.gs-beat[data-cinema-beat] {
+  opacity: min(1, calc(var(--beat-a, 0) * 5)) !important;
+  transition: none;
+}
 
-  to {
-    scale: 2.6;
-    opacity: 0;
-  }
+.gs-beat [data-beat-stage] {
+  --dot: var(--beat-a, 1);
+  --dots:
+    radial-gradient(circle, #000 calc(var(--dot) * 3.8px), transparent calc(var(--dot) * 3.8px + 0.6px)),
+    radial-gradient(circle, #000 calc(var(--dot) * 6px), transparent calc(var(--dot) * 6px + 0.6px));
+  -webkit-mask-image: var(--dots);
+  mask-image: var(--dots);
+  -webkit-mask-size: 5px 5px, 8px 8px;
+  mask-size: 5px 5px, 8px 8px;
+  -webkit-mask-position: 0 0, 2px 3px;
+  mask-position: 0 0, 2px 3px;
 }

@@ -70,53 +70,20 @@ const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd,
   );
 };
 
-/**
- * Headline whose letters assemble from scattered particles as the block fades in. Wrap the accented part in pipes: "Things I’ve |built|".
- * Screen readers get the plain sentence; the animated letters are hidden from them.
- */
-const Title: React.FC<{ text: string }> = ({ text }) => {
-  let i = 0;
-  // deterministic scatter per letter, so server and client renders match
-  const rand = (n: number): number => {
-    const x = Math.sin(n * 12.9898) * 43758.5453;
-    return x - Math.floor(x) - 0.5;
-  };
-  const scatter = (n: number): React.CSSProperties =>
-    ({
-      '--dx': `${(rand(n) * 3.4).toFixed(2)}em`,
-      '--dy': `${(rand(n + 0.37) * 2.6).toFixed(2)}em`,
-      '--r': `${(rand(n + 0.71) * 110).toFixed(0)}deg`,
-    }) as React.CSSProperties;
-  return (
-    <>
-      <span className="sr-only">{text.replace(/\|/g, '')}</span>
-      <span aria-hidden="true">
-        {text.split('|').map((segment, s) => {
-          const letters = segment.split(/(\s+)/).map((word, w) =>
-            word.trim() === '' ? (
-              word && ' '
-            ) : (
-              <span key={w} className="gs-w">
-                {[...word].map((ch, c) => (
-                  <span key={c} className="gs-c" style={scatter(i++)}>
-                    {ch}
-                  </span>
-                ))}
-              </span>
-            )
-          );
-          return s % 2 ? (
-            <strong key={s} className="gs-accent">
-              {letters}
-            </strong>
-          ) : (
-            <React.Fragment key={s}>{letters}</React.Fragment>
-          );
-        })}
-      </span>
-    </>
-  );
-};
+/** Headline with the accented part wrapped in pipes, e.g. "Beyond the |screen|". */
+const Title: React.FC<{ text: string }> = ({ text }) => (
+  <>
+    {text.split('|').map((segment, s) =>
+      s % 2 ? (
+        <strong key={s} className="gs-accent">
+          {segment}
+        </strong>
+      ) : (
+        <React.Fragment key={s}>{segment}</React.Fragment>
+      )
+    )}
+  </>
+);
 
 interface Tip {
   /** fingertip track in lib/fingertips.ts */
@@ -127,12 +94,20 @@ interface Tip {
 }
 
 /** A beat whose blocks are pinned to tracked fingertips (one per pointing hand). */
-const TipBeat: React.FC<{ t0: number; t1: number; gesture: Gesture; tips: Tip[] }> = ({ t0, t1, gesture, tips }) => (
+const TipBeat: React.FC<{
+  /** hand starts to rise / finger reaches its hold / hand starts to lower / hand is down */
+  t0: number;
+  rise: number;
+  lower: number;
+  t1: number;
+  gesture: Gesture;
+  tips: Tip[];
+}> = ({ t0, rise, lower, t1, gesture, tips }) => (
   <section
     className="gs-beat"
     data-tips="true"
     data-act={Math.min(2, Math.floor(t0 / 10))}
-    {...beatDataAttrs(span(t0, t1, { gesture }))}
+    {...beatDataAttrs(span(t0, t1, { gesture, formed: rise, fading: lower }))}
   >
     {tips.map((tip) => (
       <React.Fragment key={tip.track}>
@@ -148,26 +123,20 @@ const TipBeat: React.FC<{ t0: number; t1: number; gesture: Gesture; tips: Tip[] 
 );
 
 interface ItemProps {
-  index: string;
   kicker: string;
   title: string;
   line: string;
-  metric?: string;
   onOpen: () => void;
 }
 
-const Item: React.FC<ItemProps> = ({ index, kicker, title, line, metric, onOpen }) => (
+const Item: React.FC<ItemProps> = ({ kicker, title, line, onOpen }) => (
   <article>
-    <span className="gs-index" aria-hidden="true">
-      {index}
-    </span>
     <p className="cinema-kicker">{kicker}</p>
     <h3 className="cinema-display-title cinema-scene-title mt-1.5">
       <Title text={title} />
     </h3>
     <div className="cinema-accent-beam mt-3 w-16" aria-hidden="true" />
     <p className="cinema-subtitle mt-3 text-sm sm:text-[0.95rem]">{line}</p>
-    {metric ? <p className="gs-metric mt-2">{metric}</p> : null}
     <button type="button" className="cinema-link-action gs-link mt-1.5" onClick={onOpen}>
       Open the full story <ArrowUpRight size={14} aria-hidden="true" />
     </button>
@@ -212,25 +181,22 @@ export const GestureStage: React.FC<GestureStageProps> = ({
     });
   };
 
-  const projectItem = (id: string, index: string) => {
+  const projectItem = (id: string) => {
     const p = project(id);
     return (
       <Item
-        index={index}
         kicker={`${p.category} · ${p.year}`}
         title={short(p.id, p.title)}
         line={p.subtitle}
-        metric={p.highlightMetric}
         onOpen={() => onSelectProject(p)}
       />
     );
   };
 
-  const credentialItem = (id: string, index: string) => {
+  const credentialItem = (id: string) => {
     const c = credential(id);
     return (
       <Item
-        index={index}
         kicker={`${c.category} · ${c.year}`}
         title={short(c.id, c.title)}
         line={c.issuer}
@@ -243,9 +209,6 @@ export const GestureStage: React.FC<GestureStageProps> = ({
     const d = DISCIPLINES[i];
     return (
       <article data-text={text}>
-        <span className="gs-index" aria-hidden="true">
-          {d.index}
-        </span>
         <h3 className="cinema-display-title cinema-scene-title mt-1.5">
           <Title text={d.title} />
         </h3>
@@ -320,24 +283,26 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 11.0–12.45s: points screen-right, fingertip ≈ (75%, 48%) */}
-      <TipBeat t0={11.15} t1={12.5} gesture="point-right" tips={[{ track: 'office-right', dir: 'right', node: projectItem('jarvis', '01') }]} />
+      <TipBeat t0={11} rise={11.5} lower={12.25} t1={12.6} gesture="point-right" tips={[{ track: 'office-right', dir: 'right', node: projectItem('jarvis') }]} />
 
       {/* 12.95–13.95s: points screen-left, fingertip ≈ (31%, 60%) */}
-      <TipBeat t0={12.95} t1={13.98} gesture="point-left" tips={[{ track: 'office-left', dir: 'left', node: projectItem('forge-city', '02') }]} />
+      <TipBeat t0={12.9} rise={13.25} lower={13.75} t1={14.05} gesture="point-left" tips={[{ track: 'office-left', dir: 'left', node: projectItem('forge-city') }]} />
 
       {/* 14.4–15.85s: both index fingers out to the sides — two builds at once */}
       <TipBeat
-        t0={14.5}
-        t1={15.95}
+        t0={14.45}
+        rise={15}
+        lower={15.75}
+        t1={16.05}
         gesture="both"
         tips={[
-          { track: 'office-both-l', dir: 'left', node: projectItem('handchord', '03') },
-          { track: 'office-both-r', dir: 'right', node: projectItem('offlinepay', '04') },
+          { track: 'office-both-l', dir: 'left', node: projectItem('handchord') },
+          { track: 'office-both-r', dir: 'right', node: projectItem('offlinepay') },
         ]}
       />
 
       {/* 16.4–17.8s: looks and points up-right, fingertip ≈ (75%, 22%) */}
-      <TipBeat t0={16.6} t1={17.95} gesture="point-up" tips={[{ track: 'office-up', dir: 'up', node: projectItem('ar-linkedin-suite', '05') }]} />
+      <TipBeat t0={16.5} rise={17} lower={17.75} t1={18.05} gesture="point-up" tips={[{ track: 'office-up', dir: 'up', node: projectItem('ar-linkedin-suite') }]} />
 
       {/* 18.1–19.8s: hands down, calm — the full index */}
       <Beat t0={18.1} t1={19.8} gesture="calm" place={{ kind: 'low' }}>
@@ -364,24 +329,26 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 21.0–22.35s: points screen-right, fingertip ≈ (73%, 60%) */}
-      <TipBeat t0={21.15} t1={22.3} gesture="point-right" tips={[{ track: 'lab-right', dir: 'right', node: credentialItem('nyc-mun-2023', '01') }]} />
+      <TipBeat t0={21} rise={21.5} lower={22} t1={22.35} gesture="point-right" tips={[{ track: 'lab-right', dir: 'right', node: credentialItem('nyc-mun-2023') }]} />
 
       {/* 22.9–23.9s: points screen-left, fingertip ≈ (31%, 65%) */}
-      <TipBeat t0={22.8} t1={23.98} gesture="point-left" tips={[{ track: 'lab-left', dir: 'left', node: credentialItem('mun-13-record', '02') }]} />
+      <TipBeat t0={22.7} rise={23} lower={23.75} t1={24.05} gesture="point-left" tips={[{ track: 'lab-left', dir: 'left', node: credentialItem('mun-13-record') }]} />
 
       {/* 24.4–25.4s: both fingers out */}
       <TipBeat
-        t0={24.5}
-        t1={25.45}
+        t0={24.45}
+        rise={25}
+        lower={25.25}
+        t1={25.6}
         gesture="both"
         tips={[
-          { track: 'lab-both-l', dir: 'left', node: credentialItem('nimhans-cbt', '03') },
-          { track: 'lab-both-r', dir: 'right', node: credentialItem('school-captain', '04') },
+          { track: 'lab-both-l', dir: 'left', node: credentialItem('nimhans-cbt') },
+          { track: 'lab-both-r', dir: 'right', node: credentialItem('school-captain') },
         ]}
       />
 
       {/* 25.9–26.9s: points up-right, fingertip ≈ (74%, 30%) */}
-      <TipBeat t0={25.9} t1={26.95} gesture="point-up" tips={[{ track: 'lab-up', dir: 'up', node: credentialItem('national-hackathons', '05') }]} />
+      <TipBeat t0={25.75} rise={26.25} lower={26.75} t1={27.05} gesture="point-up" tips={[{ track: 'lab-up', dir: 'up', node: credentialItem('national-hackathons') }]} />
 
       {/* 27.2–28.4s: calm — life off-screen and the full honors index */}
       <Beat t0={27.2} t1={28.4} gesture="calm" place={{ kind: 'low' }}>
