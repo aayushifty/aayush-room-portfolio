@@ -40,13 +40,13 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
       onClose={onClose}
       onClick={handleBackdropClick}
       aria-labelledby="dossier-title"
-      className="dossier-dialog m-auto max-h-[86dvh] w-[min(92vw,720px)] overflow-y-auto rounded-2xl border-0 bg-[#070a11]/95 p-0 text-slate-100 shadow-2xl"
+      className="dossier-dialog m-auto max-h-[86dvh] w-[min(92vw,720px)] overflow-y-auto rounded-2xl border-0 p-0 text-slate-100"
     >
       {selection && (
-        <div className="p-6 sm:p-9">
+        <div className="dossier-body p-6 sm:p-9">
           <div className="flex items-start justify-between gap-4 pb-5">
             <div>
-              <div className="mb-2 inline-flex items-center gap-2 font-mono-tech text-xs uppercase tracking-[0.18em] text-[#e8c589]">
+              <div className="mb-2 inline-flex items-center gap-2 font-mono-tech text-xs uppercase tracking-[0.18em] text-[color:var(--room-accent)]">
                 {selection.kind === 'project' ? (
                   <>
                     <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
@@ -76,14 +76,14 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
               type="button"
               onClick={onClose}
               aria-label="Close dossier"
-              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-slate-300 transition hover:text-[#e8c589]"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-slate-300 transition hover:text-[color:var(--room-accent)]"
             >
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
           <div className="mt-2 space-y-6">
-            <div className="inline-flex items-center gap-2 font-mono-tech text-xs font-medium text-teal-300">
+            <div className="inline-flex items-center gap-2 font-mono-tech text-xs font-medium text-[color:var(--room-accent)]">
               <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
                 {selection.kind === 'project'
@@ -110,7 +110,7 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
                   <li key={idx} className="flex gap-3">
                     <span
                       aria-hidden="true"
-                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#e8c589]"
+                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--room-accent)]"
                     />
                     <span>{note}</span>
                   </li>
@@ -119,8 +119,8 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
             </div>
 
             {selection.kind === 'credential' && selection.item.signatories && (
-              <div className="text-sm text-[#e8c589]/90">
-                <span className="block font-mono-tech text-xs uppercase tracking-wider text-[#e8c589]">
+              <div className="text-sm text-[color:var(--room-accent)]">
+                <span className="block font-mono-tech text-xs uppercase tracking-wider text-[color:var(--room-accent)]">
                   Official Endorsement
                 </span>
                 <p className="mt-1 leading-relaxed text-slate-200">{selection.item.signatories}</p>
@@ -135,7 +135,7 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
                       href={selection.item.liveUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="cinema-link-action font-kicker text-xs font-semibold uppercase tracking-[0.16em] text-[#e8c589] hover:text-white"
+                      className="cinema-link-action font-kicker text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--room-accent)] hover:text-white"
                     >
                       <span>Launch Live Experience</span>
                       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -146,7 +146,7 @@ export const DossierDialog: React.FC<DossierDialogProps> = ({ selection, onClose
                       href={selection.item.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="cinema-link-action font-kicker text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 hover:text-[#e8c589]"
+                      className="cinema-link-action font-kicker text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 hover:text-[color:var(--room-accent)]"
                     >
                       <Github className="h-4 w-4" aria-hidden="true" />
                       <span>Inspect Repository</span>

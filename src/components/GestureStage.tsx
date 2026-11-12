@@ -166,7 +166,7 @@ const SHORT: Record<string, string> = {
   'mun-13-record': '13 MUNs · 6× Best Delegate',
   'nimhans-cbt': 'CBT Certified',
   'school-captain': 'School Captain ×2',
-  'national-hackathons': 'Hackathon Finalist',
+  'national-hackathons': 'Hackathon Winner & Finalist',
   'mahakumbha-2022': 'MahaKumbha Nationals',
   'trinity-science': 'Grade 12 Science',
 };

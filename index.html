@@ -77,11 +77,18 @@
       }
     </script>
 
+    <!-- Start downloading the light reel now, ahead of the app script; the app swaps in the
+         sharpest reel the screen can show once that has downloaded too -->
+    <script>
+      window.__reel = { url: '/video/aayush-reel-720.mp4?v=20261112s4' };
+      window.__reel.res = fetch(window.__reel.url);
+    </script>
+
     <!-- Preload opening hero frame for instant LCP -->
     <link
       rel="preload"
       as="image"
-      href="/frames/clip1/001.webp?v=20261112r30"
+      href="/frames/clip1/001.webp?v=20261112s4"
       type="image/webp"
       fetchpriority="high"
     />

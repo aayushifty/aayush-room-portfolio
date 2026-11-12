@@ -183,7 +183,6 @@ export default function App(): React.ReactElement {
         activeAct={activeAct}
         onNavigateSection={handleNavigateSection}
         progressBarRef={progressBarRef}
-        timecodeRef={timecodeRef}
       />
 
       {/* Quick optical dissolve revealing wave greeting cleanly on first load */}

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import {
   HERO_POSTER_URL,
-  VIDEO_ASSET_URL,
+  pickReelUrl,
+  pickUpgradeUrl,
 } from '@/lib/frameScrubEngine';
 import { applyFingertips } from '@/lib/fingertips';
 import {
@@ -17,6 +18,8 @@ export interface CinemaStageCanvasProps {
   onScrollProgress?: (globalProgress: number) => void;
 }
 
+const ROOM_ACCENTS = ['#f5c46b', '#ffb4c4', '#7fe9df'];
+
 export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
   videoRef,
   reducedMotion,
@@ -25,6 +28,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 }) => {
   const stageBoxRef = useRef<HTMLDivElement | null>(null);
   const posterRef = useRef<HTMLImageElement | null>(null);
+  const latchRef = useRef<HTMLCanvasElement | null>(null);
   const videoLayerRef = useRef<HTMLDivElement | null>(null);
   const lastActRef = useRef<0 | 1 | 2>(0);
   const maxScrollRef = useRef<number>(6000);
@@ -58,7 +62,70 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     // One download, held in memory: every scroll seek is then local. Streaming the URL while
     // also fetching it made two transfers fight over the connection and stalled seeks on real networks.
     const root = document.documentElement;
-    void fetch(VIDEO_ASSET_URL, { signal: abortCtrl.signal })
+    // Once the light reel is running, fetch the sharpest one this screen can show and swap it in.
+    // The frame on screen is held in a canvas while the element reloads, so the swap is not seen.
+    // While the page rests on the opening frame, the full-quality poster stays up until the sharp
+    // reel is in; the light reel is shown only if the visitor starts scrolling before that.
+    let awaitingUpgrade = pickUpgradeUrl() !== null;
+    const settle = (): void => {
+      awaitingUpgrade = false;
+      if (video.readyState >= 2) revealVideo();
+    };
+
+    const upgradeReel = async (): Promise<void> => {
+      const hiUrl = pickUpgradeUrl();
+      if (!hiUrl) {
+        settle();
+        return;
+      }
+      try {
+        const res = await fetch(hiUrl, { signal: abortCtrl.signal });
+        if (!res.ok) {
+          settle();
+          return;
+        }
+        const hi = await res.blob();
+        if (abortCtrl.signal.aborted) return;
+        const latch = latchRef.current;
+        if (latch && video.videoWidth) {
+          latch.width = video.videoWidth;
+          latch.height = video.videoHeight;
+          latch.getContext('2d')?.drawImage(video, 0, 0);
+          latch.style.opacity = '1';
+        }
+        const old = blobUrl;
+        let released = false;
+        const release = (): void => {
+          if (released) return;
+          released = true;
+          if (latch) latch.style.opacity = '0';
+          if (old) URL.revokeObjectURL(old);
+          settle();
+        };
+        video.addEventListener(
+          'loadeddata',
+          () => {
+            if (desiredTimeRef.current <= 0.15) release();
+            else video.addEventListener('seeked', release, { once: true });
+            // no seek happens when the new reel already sits on the wanted frame
+            window.setTimeout(release, 1200);
+          },
+          { once: true }
+        );
+        blobUrl = URL.createObjectURL(hi);
+        video.src = blobUrl;
+        video.load();
+      } catch {
+        // the light reel keeps playing
+        settle();
+      }
+    };
+
+    const reelUrl = pickReelUrl();
+    // take the download index.html already started; a second mount (StrictMode) fetches again
+    const early = window.__reel?.res;
+    if (window.__reel) window.__reel.res = undefined;
+    void (early ?? fetch(reelUrl, { signal: abortCtrl.signal }))
       .then(async (res) => {
         if (!res.ok || !res.body) throw new Error(`reel ${res.status}`);
         // Read in chunks so the loading line can show real progress
@@ -71,7 +138,10 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           if (done) break;
           chunks.push(value);
           loaded += value.byteLength;
-          if (total) root.style.setProperty('--reel-load', (loaded / total).toFixed(3));
+          if (total) {
+            root.style.setProperty('--reel-load', (loaded / total).toFixed(3));
+            root.style.setProperty('--reel-pct', String(Math.round((loaded / total) * 100)));
+          }
         }
         return new Blob(chunks, { type: 'video/mp4' });
       })
@@ -81,11 +151,13 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         video.src = blobUrl;
         video.load();
         root.dataset.reelReady = 'true';
+        void upgradeReel();
       })
       .catch(() => {
         // Fall back to plain streaming if the in-memory download fails (e.g. low memory, flaky fetch)
         if (abortCtrl.signal.aborted) return;
-        video.src = VIDEO_ASSET_URL;
+        awaitingUpgrade = false;
+        video.src = reelUrl;
         video.load();
         root.dataset.reelReady = 'true';
       });
@@ -104,6 +176,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
     const revealVideo = (): void => {
       if (hasFirstFrame) return;
+      if (awaitingUpgrade && desiredTimeRef.current <= 0.15) return;
       hasFirstFrame = true;
       video.style.opacity = '1';
       if (posterImg) {
@@ -163,6 +236,10 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       const state = resolveUnifiedTimeline(t / getDuration(), 1);
       applyBeatVisuals(state, reducedMotionRef.current);
       applyFingertips(t);
+      // stage light: tinted by the room on screen, blooming for a few frames as one room cuts to the next
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty('--room-accent', ROOM_ACCENTS[state.activeClip] ?? ROOM_ACCENTS[0]);
+      rootStyle.setProperty('--cut', Math.max(0, 1 - Math.min(Math.abs(t - 10), Math.abs(t - 20)) / 0.3).toFixed(3));
       if (state.activeClip !== lastActRef.current) {
         lastActRef.current = state.activeClip;
         onActChangeRef.current(state.activeClip);
@@ -280,6 +357,8 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         stageOverlay.style.setProperty('--ptr-x', ptrCurX.toFixed(4));
         stageOverlay.style.setProperty('--ptr-y', ptrCurY.toFixed(4));
       }
+      document.documentElement.style.setProperty('--ptr-x', ptrCurX.toFixed(4));
+      document.documentElement.style.setProperty('--ptr-y', ptrCurY.toFixed(4));
       if (Math.abs(ptrTargetX - ptrCurX) > 0.004 || Math.abs(ptrTargetY - ptrCurY) > 0.004) {
         ptrRafId = window.requestAnimationFrame(tickPointer);
       } else {
@@ -357,6 +436,10 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           disablePictureInPicture
           className="block h-full w-full object-cover object-[50%_24%] opacity-0 transition-opacity duration-200"
         />
+        <canvas
+          ref={latchRef}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_24%] opacity-0"
+        />
       </div>
 
       {/* CSS Scroll-Driven Atmospheric Rim Aura (composited on modern engines) */}
@@ -371,6 +454,8 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         }}
       />
 
+      <div className="reel-pointer-light" />
+      <div className="reel-cut" />
       <div className="cinema-grain absolute inset-0 opacity-[0.02]" />
     </div>
   );

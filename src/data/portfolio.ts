@@ -378,7 +378,7 @@ export const CREDENTIALS: CredentialItem[] = [
   {
     id: 'national-hackathons',
     category: 'Hackathons & Leadership',
-    title: 'National Hackathon Finalist & Prototype Builder',
+    title: 'National Hackathon Winner & Finalist',
     issuer: 'BNKS · Build Nepal (ICES) · MBMC IdeaX · Ullens Idea Lab',
     year: '2024–2026',
     badge: '4 Major Hackathons',

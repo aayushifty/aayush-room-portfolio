@@ -7,7 +7,6 @@ export interface CinemaHUDProps {
   activeAct: 0 | 1 | 2;
   onNavigateSection: (sectionId: string) => void;
   progressBarRef: React.RefObject<HTMLDivElement | null>;
-  timecodeRef: React.RefObject<HTMLSpanElement | null>;
 }
 
 const PRIMARY_NAV_ITEMS = NAV_SCROLL_TARGETS.filter(
@@ -18,7 +17,6 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
   activeAct,
   onNavigateSection,
   progressBarRef,
-  timecodeRef,
 }) => {
   const activeClip = CINEMA_CLIPS[activeAct];
 
@@ -47,7 +45,7 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
         <button
           type="button"
           onClick={() => onNavigateSection('act-studio')}
-          className="pointer-events-auto font-display text-base font-extrabold tracking-wide text-white transition hover:text-[#f5c46b] sm:text-xl [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]"
+          className="pointer-events-auto font-display text-base font-extrabold tracking-wide text-white transition hover:text-[color:var(--room-accent)] sm:text-xl [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]"
         >
           Aayush Bhatta
         </button>
@@ -66,7 +64,7 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
                 className={cn(
                   'hidden min-h-9 font-sans text-xs tracking-wide transition md:inline-flex md:items-center [text-shadow:0_2px_10px_rgb(0_0_0/0.85)]',
                   isHighlighted
-                    ? 'font-bold text-[#f5c46b]'
+                    ? 'font-bold text-[color:var(--room-accent)]'
                     : 'font-medium text-slate-200/85 hover:text-white'
                 )}
               >
@@ -75,18 +73,10 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
             );
           })}
 
-          <span
-            ref={timecodeRef}
-            aria-label="Timeline position"
-            className="hidden font-mono-tech text-[11px] font-medium tracking-[0.14em] text-slate-300/90 tabular-nums sm:inline-flex [text-shadow:0_2px_10px_rgb(0_0_0/0.85)]"
-          >
-            00:00 / 00:30
-          </span>
-
           <button
             type="button"
             onClick={() => onNavigateSection('section-contact')}
-            className="cinema-link-action min-h-9 font-sans text-xs font-bold tracking-wide text-[#f5c46b] hover:text-white"
+            className="cinema-link-action min-h-9 font-sans text-xs font-bold tracking-wide text-[color:var(--room-accent)] hover:text-white"
           >
             Contact
           </button>

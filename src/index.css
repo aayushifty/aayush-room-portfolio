@@ -453,9 +453,40 @@ dialog.dossier-dialog:not([open]) {
   }
 }
 
+/* The film stays on screen behind the story, out of focus */
 dialog.dossier-dialog::backdrop {
-  background: rgba(3, 5, 10, 0.86);
-  backdrop-filter: blur(12px);
+  background: rgba(3, 5, 10, 0.5);
+  backdrop-filter: blur(22px) saturate(1.15);
+}
+
+dialog.dossier-dialog {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--room-accent) 9%, transparent) 0, transparent 9rem),
+    rgb(7 10 17 / 0.82);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--room-accent) 55%, transparent),
+    0 40px 120px -20px rgb(0 0 0 / 0.8);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--room-accent) 55%, transparent) transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Opening answers a click, so the story arrives line by line */
+  dialog.dossier-dialog[open] .dossier-body > * > * {
+    animation: dossier-in 0.5s var(--ease-expo-out) both;
+  }
+
+  dialog.dossier-dialog[open] .dossier-body > :nth-child(2) > :nth-child(1) { animation-delay: 0.08s; }
+  dialog.dossier-dialog[open] .dossier-body > :nth-child(2) > :nth-child(2) { animation-delay: 0.14s; }
+  dialog.dossier-dialog[open] .dossier-body > :nth-child(2) > :nth-child(3) { animation-delay: 0.2s; }
+  dialog.dossier-dialog[open] .dossier-body > :nth-child(2) > :nth-child(n + 4) { animation-delay: 0.26s; }
+
+  @keyframes dossier-in {
+    from {
+      opacity: 0;
+      translate: 0 10px;
+    }
+  }
 }
 
 /* CSS Scroll-Driven Animations (Modern Web Guidance compliant) */
@@ -1074,4 +1105,109 @@ dialog.dossier-dialog::backdrop {
   mask-size: 100% 100%;
   -webkit-mask-position: 0 0;
   mask-position: 0 0;
+}
+
+/* ── Stage light ──────────────────────────────────────────────────────────────────────────────
+   One idea: the light in the picture answers the viewer and the hand. All of it sits over the
+   video, under the text, and never behind a block as a shape. */
+
+/* Loading: the cue counts up with the download */
+.gs-cue-loading::after {
+  counter-reset: pct var(--reel-pct, 0);
+  content: ' ' counter(pct) '%';
+}
+
+/* Room cut: a wash of the incoming room's colour that peaks on the cut and is gone in 0.3s of reel */
+.reel-cut {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--cut, 0) * 0.45);
+  background:
+    radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--room-accent, #f5c46b) 55%, #fff) 0%, transparent 70%);
+  mix-blend-mode: screen;
+}
+
+/* Accent lines draw out as their block forms */
+.gs-beat .cinema-accent-beam {
+  scale: var(--beat-a, 1) 1;
+}
+
+.gs-low .cinema-accent-beam {
+  transform-origin: 50% 50%;
+}
+
+/* A pool of the room's colour around the fingertip: the block reads as lit by the hand */
+.gs-spark::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(180px, 26vw, 420px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--gs-accent) 34%, transparent) 0%, transparent 62%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The cursor carries a faint light across the room */
+  .reel-pointer-light {
+    position: absolute;
+    left: calc(50% + var(--ptr-x, 0) * 50%);
+    top: calc(50% + var(--ptr-y, 0) * 50%);
+    width: clamp(260px, 34vw, 560px);
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--room-accent, #f5c46b) 16%, transparent) 0%, transparent 65%);
+    mix-blend-mode: screen;
+  }
+
+  @media (pointer: coarse) {
+    .reel-pointer-light {
+      display: none;
+    }
+  }
+
+  /* A ring leaves the fingertip while he holds the point */
+  .gs-spark::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gs-accent);
+    opacity: 0;
+  }
+
+  [data-beat-phase='active'] > .gs-spark::after {
+    animation: gs-ring 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
+  @keyframes gs-ring {
+    0% {
+      scale: 1;
+      opacity: 0.9;
+    }
+    100% {
+      scale: 7;
+      opacity: 0;
+    }
+  }
+}
+
+:root {
+  --room-accent: #f5c46b;
+}
+
+/* seven links break 4 + 3, not 6 + 1 */
+.gs-row {
+  max-width: 46rem;
+  margin-inline: auto;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--room-accent) 50%, transparent) #06080d;
 }
