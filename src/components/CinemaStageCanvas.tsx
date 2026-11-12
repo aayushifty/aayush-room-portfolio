@@ -123,12 +123,12 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
 
       const now = performance.now();
-      if (video.seeking && now - seekStartedAt < 420) {
+      if (video.seeking && now - seekStartedAt < 1500) {
         if (watchdogTimer === null) {
           watchdogTimer = window.setTimeout(() => {
             watchdogTimer = null;
             flushSeek();
-          }, 450);
+          }, 1550);
         }
         return;
       }
@@ -153,7 +153,13 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     let frameCallbackId = 0;
 
     const paintOverlays = (): void => {
-      const t = shownTime >= 0 ? shownTime : desiredTimeRef.current;
+      const target = desiredTimeRef.current;
+      // Lock text to the rendered video frame during active scrubbing, but never freeze
+      // overlays behind scroll if the decoder falls >0.75s behind or has not jumped yet.
+      const t =
+        shownTime >= 0 && Math.abs(target - shownTime) <= 0.75
+          ? shownTime
+          : target;
       const state = resolveUnifiedTimeline(t / getDuration(), 1);
       applyBeatVisuals(state, reducedMotionRef.current);
       applyFingertips(t);
@@ -209,6 +215,10 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     };
 
     const onSeeked = (): void => {
+      if (watchdogTimer !== null) {
+        window.clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
       revealVideo();
       // also covers browsers without requestVideoFrameCallback and hidden tabs where it does not fire
       shownTime = video.currentTime;
