@@ -1,31 +1,35 @@
 import React, { useEffect, useRef } from 'react';
-import { CINEMA_CLIPS } from '@/data/portfolio';
 import {
-  FrameSequenceStore,
-  ScrubFrameState,
-  drawCoverBitmap,
+  HERO_POSTER_URL,
+  VIDEO_ASSET_URL,
 } from '@/lib/frameScrubEngine';
-import { applyBeatVisuals, resolveUnifiedTimeline } from '@/lib/scrollBeats';
+import {
+  applyBeatVisuals,
+  resolveUnifiedTimeline,
+  VIDEO_DURATION_SECONDS,
+} from '@/lib/scrollBeats';
 
 export interface CinemaStageCanvasProps {
-  store: FrameSequenceStore;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  isAutoPlayingRef: React.MutableRefObject<boolean>;
   reducedMotion: boolean;
   onActChange: (actIndex: 0 | 1 | 2) => void;
   onScrollProgress?: (globalProgress: number) => void;
 }
 
 export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
-  store,
+  videoRef,
+  isAutoPlayingRef,
   reducedMotion,
   onActChange,
   onScrollProgress,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stageBoxRef = useRef<HTMLDivElement | null>(null);
   const posterRef = useRef<HTMLImageElement | null>(null);
-  const currentScrollRef = useRef<number>(0);
-  const targetScrollRef = useRef<number>(0);
+  const videoLayerRef = useRef<HTMLDivElement | null>(null);
   const lastActRef = useRef<0 | 1 | 2>(0);
   const maxScrollRef = useRef<number>(6000);
+  const desiredTimeRef = useRef<number>(0);
 
   const reducedMotionRef = useRef(reducedMotion);
   reducedMotionRef.current = reducedMotion;
@@ -36,13 +40,56 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
   onScrollProgressRef.current = onScrollProgress;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const posterImg = posterRef.current;
+    const videoLayer = videoLayerRef.current;
 
     let rafId: number | null = null;
-    let lastTimestamp = performance.now();
+    let watchdogTimer: number | null = null;
+    let revealFallbackTimer: number | null = null;
+    let seekStartedAt = 0;
+    let hasFirstFrame = false;
+    let blobUrl: string | null = null;
+    const abortCtrl = new AbortController();
+
+    video.defaultMuted = true;
+    video.muted = true;
+    // One download, held in memory: every scroll seek is then local. Streaming the URL while
+    // also fetching it made two transfers fight over the connection and stalled seeks on real networks.
+    const root = document.documentElement;
+    void fetch(VIDEO_ASSET_URL, { signal: abortCtrl.signal })
+      .then(async (res) => {
+        if (!res.ok || !res.body) throw new Error(`reel ${res.status}`);
+        // Read in chunks so the loading line can show real progress
+        const total = Number(res.headers.get('content-length')) || 0;
+        const reader = res.body.getReader();
+        const chunks: BlobPart[] = [];
+        let loaded = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.byteLength;
+          if (total) root.style.setProperty('--reel-load', (loaded / total).toFixed(3));
+        }
+        return new Blob(chunks, { type: 'video/mp4' });
+      })
+      .then((blob) => {
+        if (abortCtrl.signal.aborted) return;
+        blobUrl = URL.createObjectURL(blob);
+        video.src = blobUrl;
+        video.load();
+        root.dataset.reelReady = 'true';
+      })
+      .catch(() => {
+        // Fall back to plain streaming if the in-memory download fails (e.g. low memory, flaky fetch)
+        if (abortCtrl.signal.aborted) return;
+        video.src = VIDEO_ASSET_URL;
+        video.load();
+        root.dataset.reelReady = 'true';
+      });
 
     const measureMaxScroll = (): void => {
       maxScrollRef.current = Math.max(
@@ -51,81 +98,71 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       );
     };
 
-    const resizeCanvas = (): void => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.max(1, Math.floor(window.innerWidth * dpr));
-      const h = Math.max(1, Math.floor(window.innerHeight * dpr));
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
+    const getDuration = (): number =>
+      Number.isFinite(video.duration) && video.duration > 1
+        ? video.duration
+        : VIDEO_DURATION_SECONDS;
+
+    const revealVideo = (): void => {
+      if (hasFirstFrame) return;
+      hasFirstFrame = true;
+      video.style.opacity = '1';
+      if (posterImg) {
+        posterImg.style.opacity = '0';
+        window.setTimeout(() => {
+          if (hasFirstFrame && posterImg) {
+            posterImg.style.display = 'none';
+          }
+        }, 220);
       }
-      measureMaxScroll();
     };
 
-    const renderState = (state: ScrubFrameState): void => {
-      const w = canvas.width;
-      const h = canvas.height;
-      const activeBmp = store.getBestBitmap(state.activeClip, state.frameIndex);
-
-      const subtleDrift = reducedMotionRef.current
-        ? 1.0
-        : 1.0 + Math.sin(state.globalProgress * Math.PI) * 0.006;
-
-      if (state.secondaryClip !== null) {
-        // Pre-warm boundary frames of the upcoming continuous segment before scroll arrives
-        store.getBestBitmap(state.secondaryClip, 0);
-        store.getBestBitmap(state.secondaryClip, 2);
+    const flushSeek = (): void => {
+      if (isAutoPlayingRef.current) return;
+      if (video.readyState < 1) return;
+      if (!video.paused) {
+        video.pause();
       }
 
-      if (state.secondaryClip !== null && state.blendAlpha > 0 && state.blendAlpha < 1) {
-        const outClip = state.secondaryClip;
-        const outTotal = CINEMA_CLIPS[outClip].frameCount;
-        const outFrame = Math.min(
-          outTotal - 1,
-          Math.max(0, Math.round(state.clipProgress[outClip] * (outTotal - 1)))
-        );
-        const outBmp = store.getBestBitmap(outClip, outFrame);
-
-        if (outBmp || activeBmp) {
-          ctx.fillStyle = '#06080d';
-          ctx.fillRect(0, 0, w, h);
-
-          if (outBmp) {
-            drawCoverBitmap(
-              ctx,
-              outBmp,
-              w,
-              h,
-              1.02 + state.blendAlpha * 0.02,
-              1 - state.blendAlpha
-            );
-          }
-
-          if (activeBmp) {
-            drawCoverBitmap(
-              ctx,
-              activeBmp,
-              w,
-              h,
-              1.03 - state.blendAlpha * 0.03,
-              state.blendAlpha
-            );
-          }
-
-          if (posterRef.current && posterRef.current.style.display !== 'none') {
-            posterRef.current.style.display = 'none';
-          }
+      const now = performance.now();
+      if (video.seeking && now - seekStartedAt < 420) {
+        if (watchdogTimer === null) {
+          watchdogTimer = window.setTimeout(() => {
+            watchdogTimer = null;
+            flushSeek();
+          }, 450);
         }
-      } else if (activeBmp) {
-        ctx.fillStyle = '#06080d';
-        ctx.fillRect(0, 0, w, h);
-        drawCoverBitmap(ctx, activeBmp, w, h, subtleDrift, 1);
-        if (posterRef.current && posterRef.current.style.display !== 'none') {
-          posterRef.current.style.display = 'none';
-        }
+        return;
       }
 
-      store.setFocus(state.activeClip, state.frameIndex);
+      if (watchdogTimer !== null) {
+        window.clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
+
+      const dur = getDuration();
+      const clamped = Math.max(0, Math.min(dur - 0.01, desiredTimeRef.current));
+      if (Math.abs(video.currentTime - clamped) > 0.018) {
+        seekStartedAt = now;
+        video.currentTime = clamped;
+      }
+    };
+
+    const syncTimeline = (): void => {
+      const state = resolveUnifiedTimeline(window.scrollY, maxScrollRef.current);
+      const dur = getDuration();
+      desiredTimeRef.current = Math.max(0, Math.min(dur - 0.01, state.globalProgress * dur));
+
+      if (videoLayer && !reducedMotionRef.current) {
+        const drift = 1 + Math.sin(state.globalProgress * Math.PI) * 0.006;
+        videoLayer.style.transform = `translate3d(0, 0, 0) scale(${drift.toFixed(4)})`;
+      } else if (videoLayer) {
+        videoLayer.style.transform = 'none';
+      }
+
+      if (!isAutoPlayingRef.current) {
+        flushSeek();
+      }
 
       applyBeatVisuals(state, reducedMotionRef.current);
 
@@ -136,61 +173,55 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       onScrollProgressRef.current?.(state.globalProgress);
     };
 
-    const tick = (now: number): void => {
-      const dt = Math.min(0.05, Math.max(0.001, (now - lastTimestamp) / 1000));
-      lastTimestamp = now;
-
-      const target = targetScrollRef.current;
-      const current = currentScrollRef.current;
-
-      if (reducedMotionRef.current || Math.abs(target - current) > window.innerHeight * 2.5) {
-        currentScrollRef.current = target;
-      } else {
-        const factor = 1 - Math.exp(-24 * dt);
-        currentScrollRef.current = current + (target - current) * factor;
-      }
-
-      const delta = Math.abs(target - currentScrollRef.current);
-      const effectiveScroll = delta < 0.35 ? target : currentScrollRef.current;
-      if (delta < 0.35) {
-        currentScrollRef.current = target;
-      }
-
-      renderState(resolveUnifiedTimeline(effectiveScroll, maxScrollRef.current));
-
-      if (delta >= 0.35 && !reducedMotionRef.current) {
-        rafId = window.requestAnimationFrame(tick);
-      } else {
-        rafId = null;
-      }
-    };
-
-    const wakeLoop = (): void => {
-      targetScrollRef.current = window.scrollY;
+    const scheduleSync = (): void => {
       measureMaxScroll();
       if (rafId === null) {
-        lastTimestamp = performance.now();
-        rafId = window.requestAnimationFrame(tick);
+        rafId = window.requestAnimationFrame(() => {
+          rafId = null;
+          syncTimeline();
+        });
       }
     };
 
-    const syncStatic = (): void => {
-      targetScrollRef.current = window.scrollY;
-      currentScrollRef.current = window.scrollY;
-      measureMaxScroll();
-      renderState(resolveUnifiedTimeline(window.scrollY, maxScrollRef.current));
+    const onLoadedData = (): void => {
+      if (Math.abs(video.currentTime - desiredTimeRef.current) <= 0.35 || desiredTimeRef.current <= 0.15) {
+        revealVideo();
+      } else {
+        flushSeek();
+      }
     };
 
-    const unsubscribeStore = store.subscribe(() => {
-      if (rafId === null) {
-        renderState(resolveUnifiedTimeline(currentScrollRef.current, maxScrollRef.current));
+    const onSeeked = (): void => {
+      revealVideo();
+      if (!isAutoPlayingRef.current) {
+        flushSeek();
       }
-    });
+    };
+
+    const onCanPlay = (): void => {
+      if (Math.abs(video.currentTime - desiredTimeRef.current) <= 0.35 || desiredTimeRef.current <= 0.15) {
+        revealVideo();
+      }
+      if (!isAutoPlayingRef.current) {
+        flushSeek();
+      }
+    };
+
+    video.addEventListener('loadedmetadata', flushSeek);
+    video.addEventListener('loadeddata', onLoadedData);
+    video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('seeked', onSeeked);
+
+    revealFallbackTimer = window.setTimeout(() => {
+      if (video.readyState >= 2) {
+        revealVideo();
+      }
+    }, 1800);
 
     const stageOverlay = document.getElementById('cinema-stage-beats');
     const mutationObserver = stageOverlay
       ? new MutationObserver(() => {
-          renderState(resolveUnifiedTimeline(currentScrollRef.current, maxScrollRef.current));
+          syncTimeline();
         })
       : null;
     if (stageOverlay && mutationObserver) {
@@ -198,15 +229,16 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      resizeCanvas();
-      syncStatic();
+      measureMaxScroll();
+      syncTimeline();
     });
     resizeObserver.observe(document.body);
 
-    syncStatic();
+    measureMaxScroll();
+    syncTimeline();
 
-    window.addEventListener('scroll', wakeLoop, { passive: true });
-    window.addEventListener('resize', resizeCanvas, { passive: true });
+    window.addEventListener('scroll', scheduleSync, { passive: true });
+    window.addEventListener('resize', scheduleSync, { passive: true });
 
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     let ptrTargetX = 0;
@@ -216,10 +248,12 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     let ptrRafId: number | null = null;
 
     const tickPointer = (): void => {
-      ptrCurX += (ptrTargetX - ptrCurX) * 0.075;
-      ptrCurY += (ptrTargetY - ptrCurY) * 0.075;
-      document.documentElement.style.setProperty('--ptr-x', ptrCurX.toFixed(4));
-      document.documentElement.style.setProperty('--ptr-y', ptrCurY.toFixed(4));
+      ptrCurX += (ptrTargetX - ptrCurX) * 0.085;
+      ptrCurY += (ptrTargetY - ptrCurY) * 0.085;
+      if (stageOverlay) {
+        stageOverlay.style.setProperty('--ptr-x', ptrCurX.toFixed(4));
+        stageOverlay.style.setProperty('--ptr-y', ptrCurY.toFixed(4));
+      }
       if (Math.abs(ptrTargetX - ptrCurX) > 0.004 || Math.abs(ptrTargetY - ptrCurY) > 0.004) {
         ptrRafId = window.requestAnimationFrame(tickPointer);
       } else {
@@ -236,43 +270,67 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
     };
 
-    if (finePointer && !reducedMotion) {
+    if (finePointer && !reducedMotion && stageOverlay) {
       window.addEventListener('pointermove', onPointerMove, { passive: true });
-    } else {
-      document.documentElement.style.setProperty('--ptr-x', '0');
-      document.documentElement.style.setProperty('--ptr-y', '0');
+    } else if (stageOverlay) {
+      stageOverlay.style.setProperty('--ptr-x', '0');
+      stageOverlay.style.setProperty('--ptr-y', '0');
     }
 
     return () => {
-      mutationObserver?.disconnect();
-      resizeObserver.disconnect();
-      unsubscribeStore();
-      window.removeEventListener('scroll', wakeLoop);
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('pointermove', onPointerMove);
+      abortCtrl.abort();
+      if (watchdogTimer !== null) window.clearTimeout(watchdogTimer);
+      if (revealFallbackTimer !== null) window.clearTimeout(revealFallbackTimer);
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if (ptrRafId !== null) window.cancelAnimationFrame(ptrRafId);
+      mutationObserver?.disconnect();
+      resizeObserver.disconnect();
+      video.removeEventListener('loadedmetadata', flushSeek);
+      video.removeEventListener('loadeddata', onLoadedData);
+      video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('seeked', onSeeked);
+      window.removeEventListener('scroll', scheduleSync);
+      window.removeEventListener('resize', scheduleSync);
+      window.removeEventListener('pointermove', onPointerMove);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
     };
-  }, [store, reducedMotion]);
+  }, [isAutoPlayingRef, reducedMotion, videoRef]);
 
   return (
     <div
+      ref={stageBoxRef}
       className="fixed inset-0 z-0 overflow-hidden bg-[#06080d] pointer-events-none select-none"
       aria-hidden="true"
     >
+      <div className="reel-loadbar" />
       <img
         ref={posterRef}
-        src="/frames/clip1/001.webp?v=20261111v2"
+        src={HERO_POSTER_URL}
         alt=""
         width={1280}
         height={720}
         fetchPriority="high"
-        className="absolute inset-0 h-full w-full object-cover object-[50%_24%]"
+        className="absolute inset-0 h-full w-full object-cover object-[50%_24%] transition-opacity duration-200"
       />
-      <canvas
-        ref={canvasRef}
-        className="relative block h-full w-full"
-      />
+
+      <div
+        ref={videoLayerRef}
+        className="absolute inset-0 h-full w-full origin-[50%_24%]"
+      >
+        <video
+          ref={videoRef}
+          poster={HERO_POSTER_URL}
+          width={1280}
+          height={720}
+          preload="auto"
+          playsInline
+          muted
+          disablePictureInPicture
+          className="block h-full w-full object-cover object-[50%_24%] opacity-0 transition-opacity duration-200"
+        />
+      </div>
 
       {/* CSS Scroll-Driven Atmospheric Rim Aura (composited on modern engines) */}
       <div className="cinema-scroll-aura pointer-events-none absolute inset-0" />

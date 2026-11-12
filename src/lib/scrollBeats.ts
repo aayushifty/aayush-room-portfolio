@@ -1,26 +1,16 @@
 import { CINEMA_CLIPS } from '@/data/portfolio';
 import type { ScrubFrameState } from '@/lib/frameScrubEngine';
 
+export type Gesture = 'wave' | 'turn' | 'calm' | 'point-right' | 'point-left' | 'point-up' | 'both';
+
 export interface BeatTimingSpec {
   clip: 0 | 1 | 2;
   inStart: number;
   inEnd: number;
   outStart: number;
   outEnd: number;
-  /** Semantic gesture name used for CSS entrance kinematics */
-  gesture?:
-    | 'intro-wave'
-    | 'turn-left'
-    | 'turn-right'
-    | 'point-right'
-    | 'point-left'
-    | 'both-up'
-    | 'calm-floor'
-    | 'point-upright'
-    | 'double-left'
-    | 'double-right'
-    | 'navy-upright'
-    | 'point-down';
+  /** What he is doing in the footage while this block is up */
+  gesture?: Gesture;
   /** Keep visible through clip end (e.g. downward contact dock) */
   holdEnd?: boolean;
   /** Already active at exact start of clip (e.g. opening wave greeting) */
@@ -34,33 +24,34 @@ export interface NavScrollTarget {
   globalProgress: number;
 }
 
-/**
- * Total video duration is 20.03s (480 frames @ 24 fps):
- *   Act I   (clip 0): frames 0..239   (240 frames, 00.00s..10.00s) -> g: 0.0000..0.5000
- *   Act II  (clip 1): frames 240..383 (144 frames, 10.00s..16.00s) -> g: 0.5000..0.8000
- *   Act III (clip 2): frames 384..479 ( 96 frames, 16.00s..20.03s) -> g: 0.8000..1.0000
- */
-const CLIP1_BOUNDARY = 240 / 480; // 0.5
-const CLIP2_BOUNDARY = 384 / 480; // 0.8
-export const VIDEO_DURATION_SECONDS = 20.03;
+/** The reel is 30s: three 10s rooms (studio, glass office, night lab), 240 frames each @ 24 fps. */
+const ACT_SECONDS = 10;
+const CLIP1_BOUNDARY = 1 / 3;
+const CLIP2_BOUNDARY = 2 / 3;
+export const VIDEO_DURATION_SECONDS = 30;
+
+/** Beat timing from absolute reel seconds, with a short fade at each end. */
+export function span(
+  t0: number,
+  t1: number,
+  opts: Pick<BeatTimingSpec, 'gesture' | 'holdStart' | 'holdEnd'> = {}
+): BeatTimingSpec {
+  const clip = Math.min(2, Math.floor(t0 / ACT_SECONDS)) as 0 | 1 | 2;
+  const p = (t: number): number => Number(((t - clip * ACT_SECONDS) / ACT_SECONDS).toFixed(4));
+  const fade = Math.min(0.3, (t1 - t0) / 3);
+  return { clip, inStart: p(t0), inEnd: p(t0 + fade), outStart: p(t1 - fade), outEnd: p(t1), ...opts };
+}
 
 export const NAV_SCROLL_TARGETS: readonly NavScrollTarget[] = [
   { id: 'act-studio', label: 'Studio', act: 0, globalProgress: 0.0 },
-  { id: 'act-works', label: 'Systems', act: 1, globalProgress: 0.525 },
-  { id: 'act-credentials', label: 'Credentials', act: 2, globalProgress: 0.816 },
-  { id: 'section-contact', label: 'Contact', act: 2, globalProgress: 0.985 },
+  { id: 'act-works', label: 'Work', act: 1, globalProgress: 10.6 / 30 },
+  { id: 'act-credentials', label: 'Honors', act: 2, globalProgress: 20.6 / 30 },
+  { id: 'section-contact', label: 'Contact', act: 2, globalProgress: 29.4 / 30 },
 ];
 
-export const SECTION_PROGRESS_MAP: Record<string, number> = {
-  'act-studio': 0.0,
-  'beat-hero': 0.145,
-  'beat-identity': 0.255,
-  'beat-disciplines': 0.325,
-  'act-works': 0.525,
-  'act-credentials': 0.816,
-  'beat-beyond': 0.942,
-  'section-contact': 0.985,
-};
+export const SECTION_PROGRESS_MAP: Record<string, number> = Object.fromEntries(
+  NAV_SCROLL_TARGETS.map((t) => [t.id, t.globalProgress])
+);
 
 export function clamp01(value: number): number {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -125,9 +116,18 @@ export function resolveUnifiedTimeline(scrollY: number, maxScroll: number): Scru
   };
 }
 
+interface CachedBeatState {
+  phase: 'before' | 'active' | 'after';
+  opacityKey: string;
+  visible: boolean;
+  uKey: string;
+}
+
+const beatCache = new WeakMap<HTMLElement, CachedBeatState>();
+
 /**
  * Direct compositor-only DOM sync across all scroll-driven choreographed beat elements.
- * Zero React re-renders during scroll frames.
+ * Skips redundant style writes on untouched inactive beats so scroll frames stay sub-millisecond.
  */
 export function applyBeatVisuals(
   state: ScrubFrameState,
@@ -172,17 +172,35 @@ export function applyBeatVisuals(
     const halfSpan = Math.max(0.05, (outEnd - inStart) * 0.5);
     const centeredU = clamp01(((p - mid) / halfSpan) * 0.5 + 0.5) * 2 - 1;
 
-    if (alpha > 0.005) {
-      el.style.opacity = alpha.toFixed(4);
-      el.style.setProperty('--beat-u', reducedMotion ? '0' : centeredU.toFixed(4));
-      el.style.visibility = 'visible';
-      el.dataset.beatPhase = phase;
-    } else {
-      el.style.opacity = '0';
-      el.style.setProperty('--beat-u', phase === 'before' ? '-1' : '1');
-      el.style.visibility = 'hidden';
+    const visible = alpha > 0.005;
+    const opacityKey = visible ? alpha.toFixed(3) : '0';
+    const uKey = visible ? (reducedMotion ? '0' : centeredU.toFixed(3)) : phase === 'before' ? '-1' : '1';
+
+    const prev = beatCache.get(el);
+    if (
+      prev &&
+      prev.phase === phase &&
+      prev.opacityKey === opacityKey &&
+      prev.visible === visible &&
+      prev.uKey === uKey
+    ) {
+      continue;
+    }
+
+    if (!prev || prev.opacityKey !== opacityKey) {
+      el.style.opacity = opacityKey;
+    }
+    if (!prev || prev.uKey !== uKey) {
+      el.style.setProperty('--beat-u', uKey);
+    }
+    if (!prev || prev.visible !== visible) {
+      el.style.visibility = visible ? 'visible' : 'hidden';
+    }
+    if (!prev || prev.phase !== phase) {
       el.dataset.beatPhase = phase;
     }
+
+    beatCache.set(el, { phase, opacityKey, visible, uKey });
   }
 }
 

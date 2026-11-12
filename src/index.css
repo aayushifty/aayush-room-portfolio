@@ -371,11 +371,18 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .cinema-ptr-parallax {
+    transform: translate3d(
+      calc(var(--ptr-x, 0) * -4px),
+      calc(var(--ptr-y, 0) * -2px),
+      0
+    );
+  }
+
   [data-cinema-beat] {
     transition:
       opacity 0.15s ease-out,
       visibility 0s linear 0.15s;
-    will-change: opacity, transform;
   }
 
   [data-cinema-beat][data-beat-phase='active'] {
@@ -391,7 +398,6 @@
       opacity 0.14s ease-out,
       transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
     backface-visibility: hidden;
-    will-change: opacity, transform;
   }
 
   [data-cinema-beat][data-align='left'] [data-beat-stage] {
@@ -463,12 +469,8 @@
 
   [data-cinema-beat][data-beat-phase='active'] [data-beat-stage] {
     opacity: 1;
-    transform: translate3d(
-        calc(var(--ptr-x, 0) * -5px),
-        calc(var(--ptr-y, 0) * -3px),
-        0
-      )
-      scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
+    will-change: opacity, transform;
     transition:
       opacity 0.44s var(--ease-expo-out) 0.14s,
       transform 0.72s var(--ease-spring) 0.08s;
@@ -485,7 +487,7 @@
 
   [data-cinema-beat][data-beat-phase='active'] .cinema-display-title {
     clip-path: polygon(-6% -18%, 108% -18%, 108% 124%, -6% 124%);
-    transform: translate3d(calc(var(--ptr-x, 0) * -2px), 0, 0);
+    transform: translate3d(0, 0, 0);
     transition:
       clip-path 0.6s var(--ease-expo-out) 0.09s,
       transform 0.68s var(--ease-spring) 0.09s;
@@ -693,5 +695,316 @@ dialog.dossier-dialog::backdrop {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+}
+
+/* ── Gesture stage ─────────────────────────────────────────────────────────────────────────────
+   Every block is anchored to a point in the video frame, so text stays beside the hand that
+   points at it at any window shape. --vidw/--vidh are the rendered size of the object-cover
+   16:9 video (it is positioned at 50% 24%). */
+.gs-beat {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  --vidw: max(100vw, 177.78dvh);
+  --vidh: max(100dvh, 56.25vw);
+  --gs-accent: #f5c46b;
+  --act-accent: var(--gs-accent);
+}
+
+.gs-beat[data-act='1'] {
+  --gs-accent: #ffb4c4;
+}
+
+.gs-beat[data-act='2'] {
+  --gs-accent: #7fe9df;
+}
+
+.gs-accent {
+  color: var(--gs-accent);
+  font-weight: inherit;
+}
+
+.gs-anchor {
+  position: absolute;
+}
+
+/* Soft feathered shade behind the words: no edge, no box */
+.gs-anchor::before {
+  content: '';
+  position: absolute;
+  inset: -30% -26%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(6 8 13 / 0.66), rgb(6 8 13 / 0.36) 58%, transparent);
+}
+
+.gs-side {
+  top: calc((100dvh - var(--vidh)) * 0.24 + var(--v) * var(--vidh));
+  translate: 0 -50%;
+  width: min(27rem, calc(50vw - var(--u) * var(--vidw) - 2.4vw));
+}
+
+.gs-side[data-side='right'] {
+  left: calc(50vw + var(--u) * var(--vidw));
+}
+
+.gs-side[data-side='left'] {
+  right: calc(50vw + var(--u) * var(--vidw));
+}
+
+.gs-low {
+  left: 50%;
+  translate: -50% 0;
+  bottom: max(6dvh, 2.5rem);
+  width: min(60rem, 90vw);
+  text-align: center;
+}
+
+.gs-low::before {
+  inset: -70% -50vw -30vh;
+  background: linear-gradient(0deg, rgb(6 8 13 / 0.92) 12%, rgb(6 8 13 / 0.6) 52%, transparent);
+}
+
+.gs-split {
+  left: 3vw;
+  right: 3vw;
+  bottom: max(8dvh, 3rem);
+}
+
+.gs-split::before {
+  inset: -40% -3vw -30vh;
+  background: linear-gradient(0deg, rgb(6 8 13 / 0.9) 10%, rgb(6 8 13 / 0.5) 55%, transparent);
+}
+
+.gs-split > [data-beat-stage] {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.gs-split article {
+  width: min(24rem, 27vw);
+}
+
+[data-text='end'] {
+  text-align: right;
+}
+
+[data-text='end'] .cinema-subtitle,
+[data-text='end'] .cinema-accent-beam {
+  margin-left: auto;
+}
+
+.gs-beat .cinema-accent-beam {
+  background: linear-gradient(90deg, var(--gs-accent), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--gs-accent) 45%, transparent);
+}
+
+.gs-beat [data-text='end'] .cinema-accent-beam {
+  background: linear-gradient(270deg, var(--gs-accent), transparent);
+  transform-origin: 100% 50%;
+}
+
+.gs-low .cinema-accent-beam {
+  margin-inline: auto;
+}
+
+/* Outlined ghost numeral above each item */
+.gs-index {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 1.6rem + 3vw, 5rem);
+  line-height: 0.82;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--gs-accent) 80%, transparent);
+  margin-bottom: 0.4rem;
+}
+
+.gs-metric {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--gs-accent);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.95);
+}
+
+.gs-link {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.gs-link:hover,
+.gs-link:focus-visible {
+  color: var(--gs-accent);
+}
+
+.gs-link-strong {
+  color: var(--gs-accent);
+  font-size: 0.95rem;
+}
+
+.gs-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 1.5rem;
+}
+
+.gs-cue {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(241 245 249 / 0.85);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.95);
+}
+
+.gs-cue-ready {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+:root[data-reel-ready] .gs-cue-loading {
+  display: none;
+}
+
+:root[data-reel-ready] .gs-cue-ready {
+  display: inline-flex;
+}
+
+/* Download progress for the reel: a hairline along the bottom edge, gone once it is in memory */
+.reel-loadbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 2px;
+  z-index: 60;
+  background: #f5c46b;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--reel-load, 0));
+  transition: transform 0.2s linear, opacity 0.5s ease 0.2s;
+}
+
+:root[data-reel-ready] .reel-loadbar {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-cinema-beat] .gs-index {
+    opacity: 0;
+    translate: 0 16px;
+    transition: opacity 0.14s ease-out, translate 0.2s ease-out;
+  }
+
+  [data-cinema-beat][data-beat-phase='active'] .gs-index {
+    opacity: 0.75;
+    translate: 0 0;
+    transition:
+      opacity 0.5s var(--ease-expo-out) 0.04s,
+      translate 0.7s var(--ease-spring) 0.04s;
+  }
+
+  /* A hairline shoots from the fingertip to the block when he points */
+  .gs-side[data-trace]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: clamp(1.25rem, 3vw, 3.25rem);
+    height: 1.5px;
+    opacity: 0;
+    scale: 0 1;
+    transition: scale 0.18s ease-out, opacity 0.14s ease-out;
+  }
+
+  .gs-side[data-trace][data-side='right']::after {
+    right: calc(100% + 0.6vw);
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, transparent, var(--gs-accent));
+  }
+
+  .gs-side[data-trace][data-side='left']::after {
+    left: calc(100% + 0.6vw);
+    transform-origin: 100% 50%;
+    background: linear-gradient(270deg, transparent, var(--gs-accent));
+  }
+
+  [data-beat-phase='active'] > .gs-side[data-trace]::after {
+    opacity: 0.95;
+    scale: 1 1;
+    transition:
+      scale 0.5s var(--ease-expo-out) 0.02s,
+      opacity 0.3s ease-out;
+  }
+
+  .gs-cue-ready svg {
+    animation: gs-nudge 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes gs-nudge {
+  50% {
+    translate: 0 4px;
+  }
+}
+
+/* Phones and tall windows crop the hands out of frame, so blocks dock to the bottom instead */
+@media (max-width: 899px), (max-aspect-ratio: 5/4) {
+  .gs-low .cinema-hero-title {
+    font-size: clamp(2.3rem, 10.5vw, 3.2rem);
+  }
+
+  .gs-anchor.gs-side[data-side],
+  .gs-anchor.gs-low,
+  .gs-anchor.gs-split {
+    inset: auto 5vw max(4.5dvh, 1.5rem) 5vw;
+    width: auto;
+    translate: none;
+  }
+
+  .gs-anchor::before {
+    inset: -45vh -5vw -10vh;
+    background: linear-gradient(0deg, rgb(6 8 13 / 0.94) 14%, rgb(6 8 13 / 0.62) 55%, transparent);
+  }
+
+  .gs-side[data-trace]::after {
+    display: none;
+  }
+
+  .gs-side [data-text],
+  .gs-split [data-text] {
+    text-align: left;
+  }
+
+  .gs-side .cinema-subtitle,
+  .gs-side .cinema-accent-beam,
+  .gs-split .cinema-accent-beam {
+    margin-left: 0;
+  }
+
+  .gs-beat [data-text='end'] .cinema-accent-beam {
+    background: linear-gradient(90deg, var(--gs-accent), transparent);
+    transform-origin: 0 50%;
+  }
+
+  .gs-split > [data-beat-stage] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .gs-split article {
+    width: auto;
+  }
+
+  .gs-split .cinema-subtitle,
+  .gs-split .gs-index,
+  .gs-split .gs-metric {
+    display: none;
   }
 }

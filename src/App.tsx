@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import { CINEMA_CLIPS, CredentialItem, ProjectItem } from '@/data/portfolio';
-import { FrameSequenceStore } from '@/lib/frameScrubEngine';
 import { SECTION_PROGRESS_MAP, VIDEO_DURATION_SECONDS } from '@/lib/scrollBeats';
 import { CinemaStageCanvas } from '@/components/CinemaStageCanvas';
 import { CinemaHUD } from '@/components/CinemaHUD';
-import { HeroActStudio } from '@/components/HeroActStudio';
-import { WorksActPenthouse } from '@/components/WorksActPenthouse';
-import { CredentialsActLab } from '@/components/CredentialsActLab';
+import { GestureStage } from '@/components/GestureStage';
 import { DossierDialog, DossierSelection } from '@/components/DossierDialog';
 
 export default function App(): React.ReactElement {
@@ -22,12 +19,14 @@ export default function App(): React.ReactElement {
 
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const timecodeRef = useRef<HTMLSpanElement | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const isAutoPlayingRef = useRef<boolean>(false);
+  const dossierOpenRef = useRef<boolean>(false);
   const lenisRef = useRef<Lenis | null>(null);
   const jumpTimerRef = useRef<number | null>(null);
   const autoPlayRafRef = useRef<number | null>(null);
 
-  const store = useMemo(() => new FrameSequenceStore(), []);
+  dossierOpenRef.current = Boolean(dossierSelection);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -39,11 +38,6 @@ export default function App(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    store.startPreloadAll();
-    return () => store.dispose();
-  }, [store]);
-
-  useEffect(() => {
     if (reducedMotion) {
       lenisRef.current?.destroy();
       lenisRef.current = null;
@@ -51,11 +45,11 @@ export default function App(): React.ReactElement {
     }
 
     const lenis = new Lenis({
-      duration: 1.05,
+      duration: 0.85,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: 0.9,
-      touchMultiplier: 1.05,
+      wheelMultiplier: 1.15,
+      touchMultiplier: 1.15,
     });
     lenisRef.current = lenis;
 
@@ -80,8 +74,12 @@ export default function App(): React.ReactElement {
   useEffect(() => {
     if (dossierSelection || isAutoPlaying) {
       lenisRef.current?.stop();
-    } else {
-      lenisRef.current?.start();
+    } else if (lenisRef.current) {
+      lenisRef.current.start();
+      lenisRef.current.scrollTo(window.scrollY, {
+        immediate: true,
+        force: true,
+      });
     }
   }, [dossierSelection, isAutoPlaying]);
 
@@ -92,44 +90,75 @@ export default function App(): React.ReactElement {
   }, [activeAct]);
 
   const stopAutoPlay = useCallback(() => {
+    isAutoPlayingRef.current = false;
     if (autoPlayRafRef.current !== null) {
       window.cancelAnimationFrame(autoPlayRafRef.current);
       autoPlayRafRef.current = null;
     }
-    const audio = audioRef.current;
-    if (audio && !audio.paused) {
-      audio.pause();
+    const video = videoRef.current;
+    if (video) {
+      if (!video.paused) {
+        video.pause();
+      }
+      video.muted = true;
+    }
+    if (!dossierOpenRef.current && lenisRef.current) {
+      lenisRef.current.start();
+      lenisRef.current.scrollTo(window.scrollY, {
+        immediate: true,
+        force: true,
+      });
     }
     setIsAutoPlaying(false);
   }, []);
 
   const startPlaybackFrom = useCallback((startSec: number) => {
-    const audio = audioRef.current;
-    if (audio) {
-      const beginAudio = (): void => {
-        try {
-          if (Math.abs(audio.currentTime - startSec) > 0.05) {
-            audio.currentTime = startSec;
-          }
-          const playPromise = audio.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {
-              // Browser blocked audio output — timer clock fallback keeps visual playback active
-            });
-          }
-        } catch {
-          // Ignore seek error before metadata loads; rAF clock advances smoothly
-        }
-      };
-
-      if (audio.readyState >= 1) {
-        beginAudio();
-      } else {
-        audio.addEventListener('loadedmetadata', beginAudio, { once: true });
-        audio.load();
-      }
-    }
+    isAutoPlayingRef.current = true;
+    lenisRef.current?.stop();
     setIsAutoPlaying(true);
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const beginVideo = (): void => {
+      if (!isAutoPlayingRef.current) return;
+      try {
+        const safeDuration =
+          Number.isFinite(video.duration) && video.duration > 0.5
+            ? video.duration
+            : VIDEO_DURATION_SECONDS;
+        const clampedSec = Math.min(safeDuration - 0.04, Math.max(0, startSec));
+        if (Math.abs(video.currentTime - clampedSec) > 0.04) {
+          video.currentTime = clampedSec;
+        }
+        video.muted = false;
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((err: unknown) => {
+            if (!isAutoPlayingRef.current) return;
+            const isBlocked =
+              err instanceof DOMException &&
+              (err.name === 'NotAllowedError' || err.name === 'NotSupportedError');
+            if (isBlocked || !video.muted) {
+              // Retry muted when unmuted autoplay is restricted by the browser
+              video.muted = true;
+              video.play().catch(() => {
+                // Wall-clock rAF fallback in stepPlayback keeps visual timeline moving
+              });
+            }
+          });
+        }
+      } catch {
+        // Ignore seek error before metadata loads; wall-clock rAF advances cleanly
+      }
+    };
+
+    if (video.readyState >= 1) {
+      beginVideo();
+    } else {
+      video.addEventListener('loadedmetadata', beginVideo, { once: true });
+      video.load();
+    }
   }, []);
 
   const handleToggleAutoPlay = useCallback(() => {
@@ -161,40 +190,53 @@ export default function App(): React.ReactElement {
       document.documentElement.scrollHeight - window.innerHeight
     );
     const curProgress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
-    const startOffsetSec = curProgress * VIDEO_DURATION_SECONDS;
-    const startPerfMs = performance.now();
-    let lastAudioTime = audioRef.current ? audioRef.current.currentTime : 0;
-    let lastAudioTickMs = performance.now();
+    let baseOffsetSec = curProgress * VIDEO_DURATION_SECONDS;
+    let basePerfMs = performance.now();
+    const effectStartMs = basePerfMs;
+    let videoStartedPlaying = false;
 
     const stepPlayback = (now: number): void => {
+      if (!isAutoPlayingRef.current) return;
+
       const currentMax = Math.max(
         1,
         document.documentElement.scrollHeight - window.innerHeight
       );
-      const audio = audioRef.current;
+      const video = videoRef.current;
       const duration =
-        audio && Number.isFinite(audio.duration) && audio.duration > 1
-          ? audio.duration
+        video && Number.isFinite(video.duration) && video.duration > 1
+          ? video.duration
           : VIDEO_DURATION_SECONDS;
 
-      const wallSec = startOffsetSec + (now - startPerfMs) / 1000;
-      let elapsedSec = wallSec;
+      let elapsedSec = baseOffsetSec;
 
-      if (audio && !audio.paused && !audio.ended) {
-        if (Math.abs(audio.currentTime - lastAudioTime) > 0.015) {
-          lastAudioTime = audio.currentTime;
-          lastAudioTickMs = now;
-        }
-        // Only lock scroll to audio clock while audio decoder is actually advancing in real time
-        if (audio.currentTime > 0.05 && now - lastAudioTickMs < 350) {
-          elapsedSec = audio.currentTime;
+      if (video && !video.paused && !video.ended) {
+        videoStartedPlaying = true;
+        elapsedSec = video.currentTime;
+        baseOffsetSec = elapsedSec;
+        basePerfMs = now;
+      } else if (
+        video?.ended ||
+        (videoStartedPlaying && video && video.currentTime >= duration - 0.04)
+      ) {
+        elapsedSec = duration;
+      } else if (now - effectStartMs > 280) {
+        elapsedSec = baseOffsetSec + (now - basePerfMs) / 1000;
+        if (
+          video &&
+          video.paused &&
+          !video.seeking &&
+          video.readyState >= 1 &&
+          Math.abs(video.currentTime - elapsedSec) > 0.05
+        ) {
+          video.currentTime = Math.min(duration - 0.04, elapsedSec);
         }
       }
 
       const progress = Math.min(1, Math.max(0, elapsedSec / duration));
       window.scrollTo({ top: progress * currentMax, behavior: 'auto' });
 
-      if (progress >= 1 || audio?.ended) {
+      if (progress >= 1 || video?.ended) {
         stopAutoPlay();
         return;
       }
@@ -259,6 +301,10 @@ export default function App(): React.ReactElement {
 
       if (lenisRef.current) {
         lenisRef.current.start();
+        lenisRef.current.scrollTo(window.scrollY, {
+          immediate: true,
+          force: true,
+        });
         if (jumpTimerRef.current !== null) {
           window.clearTimeout(jumpTimerRef.current);
         }
@@ -269,10 +315,10 @@ export default function App(): React.ReactElement {
           delete document.documentElement.dataset.cinemaJumping;
           window.dispatchEvent(new Event('scroll'));
         };
-        jumpTimerRef.current = window.setTimeout(finishJump, 1180);
+        jumpTimerRef.current = window.setTimeout(finishJump, 1040);
 
         lenisRef.current.scrollTo(targetY, {
-          duration: 1.15,
+          duration: 1.0,
           onComplete: () => {
             if (jumpTimerRef.current !== null) {
               window.clearTimeout(jumpTimerRef.current);
@@ -330,22 +376,18 @@ export default function App(): React.ReactElement {
 
   const handleReplayFromStart = useCallback(() => {
     stopAutoPlay();
+    lenisRef.current?.stop();
     window.scrollTo({ top: 0, behavior: 'auto' });
+    lenisRef.current?.scrollTo(0, { immediate: true, force: true });
+    window.dispatchEvent(new Event('scroll'));
     startPlaybackFrom(0);
   }, [startPlaybackFrom, stopAutoPlay]);
 
   return (
     <div className="relative min-h-screen bg-[#06080d] text-slate-100">
-      <audio
-        ref={audioRef}
-        src="/audio/intro-reel.m4a"
-        preload="none"
-        playsInline
-        className="hidden"
-      />
-
       <CinemaStageCanvas
-        store={store}
+        videoRef={videoRef}
+        isAutoPlayingRef={isAutoPlayingRef}
         reducedMotion={reducedMotion}
         onActChange={setActiveAct}
         onScrollProgress={handleScrollProgress}
@@ -367,20 +409,16 @@ export default function App(): React.ReactElement {
       />
 
       {/* Unified Sticky Scroll-Synced Runway */}
-      <main id="cinema-runway" className="relative z-10 h-[1950vh]">
+      <main id="cinema-runway" className="relative z-10 h-[3000vh]">
         <div
           id="cinema-stage-beats"
           className="cinema-perspective-stage sticky top-0 h-[100dvh] w-full overflow-hidden"
         >
-          <HeroActStudio
-            onNavigateSection={handleNavigateSection}
-            isAutoPlaying={isAutoPlaying}
-            onToggleAutoPlay={handleToggleAutoPlay}
-          />
-          <WorksActPenthouse onSelectProject={handleSelectProject} />
-          <CredentialsActLab
+          <GestureStage
+            onSelectProject={handleSelectProject}
             onSelectCredential={handleSelectCredential}
             onReplayFromStart={handleReplayFromStart}
+            onBackToTop={() => handleNavigateSection('act-studio')}
           />
         </div>
       </main>
