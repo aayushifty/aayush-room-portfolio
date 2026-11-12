@@ -12,18 +12,18 @@ export interface ScrubFrameState {
 
 declare global {
   interface Window {
-    /** Set by the inline script in index.html: the reel chosen for this device and its in-flight download. */
+    /** Set by the inline script in index.html: the start reel for this device. */
     __reel?: { url: string };
   }
 }
 
-/** The start reel: 1080p, small enough to arrive in seconds, sharp enough to be watched as it is. */
-export const pickReelUrl = (): string => window.__reel?.url ?? '/video/aayush-reel-1080.mp4?v=20261112s8';
+/** The start reel: 720p, under 4 MB, so the whole film is playable within seconds of opening. */
+export const pickReelUrl = (): string => window.__reel?.url ?? '/video/aayush-reel-720.mp4?v=20261112s8';
 
 /**
  * The sharpest reel this screen can actually show, fetched after the light one and swapped in.
  * A tall phone draws the frame over 2000 px high, so it needs the 2K master as much as a desktop does.
- * Null on data-saver, 2G or low-memory devices: they stay on the 1080p start reel.
+ * Null on data-saver or 2G: they stay on the 720p start reel. Low-memory devices get 1080p.
  */
 export function pickUpgradeUrl(): string | null {
   const nav = navigator as Navigator & {
@@ -35,8 +35,8 @@ export function pickUpgradeUrl(): string | null {
   // No screen-size test: the window can be measured mid-layout or resized later, and the 2K
   // master drawn smaller than its pixels is simply at its crispest.
   const lowMemory = nav.deviceMemory !== undefined && nav.deviceMemory <= 2;
-  // low-memory devices keep the 1080p start reel rather than holding a second, larger one
-  return lowMemory ? null : '/video/aayush-reel.mp4?v=20261112s8';
+  // low-memory devices take the lighter 1080p copy rather than the 25 MB master
+  return lowMemory ? '/video/aayush-reel-1080.mp4?v=20261112s8' : '/video/aayush-reel.mp4?v=20261112s8';
 }
 
 export const HERO_POSTER_URL = '/frames/clip1/001.webp?v=20261112s4';

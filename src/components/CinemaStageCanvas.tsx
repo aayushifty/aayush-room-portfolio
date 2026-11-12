@@ -139,10 +139,17 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       root.style.setProperty('--reel-pct', String(Math.round(f * 100)));
       if (f >= 0.99) startUpgrade();
     };
+    // The browser stops buffering a paused video short of its end and goes idle; idle with the
+    // first frames playable means the connection is free for the 2K copy.
+    const onSuspend = (): void => {
+      onProgress();
+      if (video.readyState >= 3) startUpgrade();
+    };
     const onFirstData = (): void => {
       root.dataset.reelReady = 'true';
     };
     video.addEventListener('progress', onProgress);
+    video.addEventListener('suspend', onSuspend);
     video.addEventListener('loadeddata', onFirstData, { once: true });
     // some browsers stop buffering a paused video early; upgrade anyway after a while
     upgradeTimer = window.setTimeout(startUpgrade, 30000);
@@ -406,6 +413,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       abortCtrl.abort();
       if (upgradeTimer !== null) window.clearTimeout(upgradeTimer);
       video.removeEventListener('progress', onProgress);
+      video.removeEventListener('suspend', onSuspend);
       video.removeEventListener('loadeddata', onFirstData);
       if (watchdogTimer !== null) window.clearTimeout(watchdogTimer);
       if (restTimer !== null) window.clearTimeout(restTimer);
