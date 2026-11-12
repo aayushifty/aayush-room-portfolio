@@ -189,6 +189,8 @@ export function applyBeatVisuals(
 
     if (!prev || prev.opacityKey !== opacityKey) {
       el.style.opacity = opacityKey;
+      // exposed so fingertip blocks can grow out of the finger as they fade in
+      el.style.setProperty('--beat-a', opacityKey);
     }
     if (!prev || prev.uKey !== uKey) {
       el.style.setProperty('--beat-u', uKey);

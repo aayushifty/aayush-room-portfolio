@@ -3,6 +3,7 @@ import {
   HERO_POSTER_URL,
   VIDEO_ASSET_URL,
 } from '@/lib/frameScrubEngine';
+import { applyFingertips } from '@/lib/fingertips';
 import {
   applyBeatVisuals,
   resolveUnifiedTimeline,
@@ -165,6 +166,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
 
       applyBeatVisuals(state, reducedMotionRef.current);
+      applyFingertips(desiredTimeRef.current);
 
       if (state.activeClip !== lastActRef.current) {
         lastActRef.current = state.activeClip;

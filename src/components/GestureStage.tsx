@@ -26,8 +26,7 @@ export interface GestureStageProps {
  */
 type Place =
   | { kind: 'low' }
-  | { kind: 'split' }
-  | { kind: 'side'; side: 'left' | 'right'; u: number; v: number; trace?: boolean };
+  | { kind: 'side'; side: 'left' | 'right'; u: number; v: number };
 
 interface BeatProps {
   t0: number;
@@ -41,8 +40,7 @@ interface BeatProps {
 }
 
 const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd, id, children }) => {
-  const align =
-    place.kind === 'side' ? place.side : place.kind === 'split' ? 'split' : 'bottom';
+  const align = place.kind === 'side' ? place.side : 'bottom';
   const anchorStyle =
     place.kind === 'side'
       ? ({ '--u': place.u, '--v': place.v } as React.CSSProperties)
@@ -59,16 +57,11 @@ const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd,
       <div
         className={`gs-anchor gs-${place.kind}`}
         data-side={place.kind === 'side' ? place.side : undefined}
-        data-trace={place.kind === 'side' && place.trace ? 'true' : undefined}
         style={anchorStyle}
       >
         <div
           data-beat-stage="true"
-          className={
-            place.kind === 'split'
-              ? 'pointer-events-auto'
-              : 'cinema-flank-container pointer-events-auto'
-          }
+          className="cinema-flank-container pointer-events-auto"
         >
           {children}
         </div>
@@ -77,8 +70,70 @@ const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd,
   );
 };
 
-const Accent: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <strong className="gs-accent">{children}</strong>
+/**
+ * Headline that reveals letter by letter. Wrap the accented part in pipes: "Things I’ve |built|".
+ * Screen readers get the plain sentence; the animated letters are hidden from them.
+ */
+const Title: React.FC<{ text: string }> = ({ text }) => {
+  let i = 0;
+  return (
+    <>
+      <span className="sr-only">{text.replace(/\|/g, '')}</span>
+      <span aria-hidden="true">
+        {text.split('|').map((segment, s) => {
+          const letters = segment.split(/(\s+)/).map((word, w) =>
+            word.trim() === '' ? (
+              word && ' '
+            ) : (
+              <span key={w} className="gs-w">
+                {[...word].map((ch, c) => (
+                  <span key={c} className="gs-c" style={{ '--i': i++ } as React.CSSProperties}>
+                    {ch}
+                  </span>
+                ))}
+              </span>
+            )
+          );
+          return s % 2 ? (
+            <strong key={s} className="gs-accent">
+              {letters}
+            </strong>
+          ) : (
+            <React.Fragment key={s}>{letters}</React.Fragment>
+          );
+        })}
+      </span>
+    </>
+  );
+};
+
+interface Tip {
+  /** fingertip track in lib/fingertips.ts */
+  track: string;
+  /** which way the finger points: decides which side of it the block sits */
+  dir: 'left' | 'right' | 'up';
+  node: React.ReactNode;
+}
+
+/** A beat whose blocks are pinned to tracked fingertips (one per pointing hand). */
+const TipBeat: React.FC<{ t0: number; t1: number; gesture: Gesture; tips: Tip[] }> = ({ t0, t1, gesture, tips }) => (
+  <section
+    className="gs-beat"
+    data-tips="true"
+    data-act={Math.min(2, Math.floor(t0 / 10))}
+    {...beatDataAttrs(span(t0, t1, { gesture }))}
+  >
+    {tips.map((tip) => (
+      <React.Fragment key={tip.track}>
+        <div className="gs-anchor gs-tip" data-tip={tip.track} data-dir={tip.dir}>
+          <div data-beat-stage="true" className="cinema-flank-container pointer-events-auto">
+            {tip.node}
+          </div>
+        </div>
+        <i className="gs-spark" aria-hidden="true" />
+      </React.Fragment>
+    ))}
+  </section>
 );
 
 interface ItemProps {
@@ -87,19 +142,18 @@ interface ItemProps {
   title: string;
   line: string;
   metric?: string;
-  /** 'end' right-aligns the block so it finishes at the fingertip pointing left */
-  text: 'start' | 'end';
   onOpen: () => void;
-  contained?: boolean;
 }
 
-const Item: React.FC<ItemProps> = ({ index, kicker, title, line, metric, text, onOpen, contained }) => (
-  <article data-text={text} className={contained ? 'cinema-flank-container' : undefined}>
+const Item: React.FC<ItemProps> = ({ index, kicker, title, line, metric, onOpen }) => (
+  <article>
     <span className="gs-index" aria-hidden="true">
       {index}
     </span>
     <p className="cinema-kicker">{kicker}</p>
-    <h3 className="cinema-display-title cinema-scene-title mt-1.5">{title}</h3>
+    <h3 className="cinema-display-title cinema-scene-title mt-1.5">
+      <Title text={title} />
+    </h3>
     <div className="cinema-accent-beam mt-3 w-16" aria-hidden="true" />
     <p className="cinema-subtitle mt-3 text-sm sm:text-[0.95rem]">{line}</p>
     {metric ? <p className="gs-metric mt-2">{metric}</p> : null}
@@ -147,7 +201,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
     });
   };
 
-  const projectItem = (id: string, index: string, text: 'start' | 'end', contained = false) => {
+  const projectItem = (id: string, index: string) => {
     const p = project(id);
     return (
       <Item
@@ -156,14 +210,12 @@ export const GestureStage: React.FC<GestureStageProps> = ({
         title={short(p.id, p.title)}
         line={p.subtitle}
         metric={p.highlightMetric}
-        text={text}
-        contained={contained}
         onOpen={() => onSelectProject(p)}
       />
     );
   };
 
-  const credentialItem = (id: string, index: string, text: 'start' | 'end', contained = false) => {
+  const credentialItem = (id: string, index: string) => {
     const c = credential(id);
     return (
       <Item
@@ -171,8 +223,6 @@ export const GestureStage: React.FC<GestureStageProps> = ({
         kicker={`${c.category} · ${c.year}`}
         title={short(c.id, c.title)}
         line={c.issuer}
-        text={text}
-        contained={contained}
         onOpen={() => onSelectCredential(c)}
       />
     );
@@ -185,7 +235,9 @@ export const GestureStage: React.FC<GestureStageProps> = ({
         <span className="gs-index" aria-hidden="true">
           {d.index}
         </span>
-        <h3 className="cinema-display-title cinema-scene-title mt-1.5">{d.title}</h3>
+        <h3 className="cinema-display-title cinema-scene-title mt-1.5">
+          <Title text={d.title} />
+        </h3>
         <div className="cinema-accent-beam mt-3 w-16" aria-hidden="true" />
         <p className="cinema-subtitle mt-3 text-sm sm:text-base">{d.tagline}</p>
       </article>
@@ -200,11 +252,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       <Beat id="act-studio" t0={0} t1={1.75} gesture="wave" place={{ kind: 'low' }} holdStart>
         <p className="cinema-kicker">{PROFILE.location}</p>
         <h1 className="cinema-display-title cinema-hero-title mt-2">
-          <span className="cinema-word-reveal">Hi,</span>{' '}
-          <span className="cinema-word-reveal cinema-word-delay-1">I’m</span>{' '}
-          <span className="cinema-word-reveal cinema-word-delay-2">
-            <Accent>Aayush.</Accent>
-          </span>
+          <Title text="Hi, I’m |Aayush.|" />
         </h1>
         <p className="cinema-subtitle mx-auto mt-3 text-sm sm:text-base">
           I build software that sees, listens and gets things done.
@@ -224,7 +272,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
             {PROFILE.fullName} · {PROFILE.handle}
           </p>
           <h2 className="cinema-display-title cinema-scene-title mt-1.5">
-            Engineering <Accent>living</Accent> software
+            <Title text="Engineering |living| software" />
           </h2>
           <div className="cinema-accent-beam mt-3 w-16" aria-hidden="true" />
           <p className="cinema-subtitle mt-3 text-sm sm:text-base">
@@ -256,36 +304,35 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       <Beat id="act-works" t0={10.25} t1={10.9} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">Selected work</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
-          Things I’ve <Accent>built</Accent>
+          <Title text="Things I’ve |built|" />
         </h2>
       </Beat>
 
       {/* 11.0–12.45s: points screen-right, fingertip ≈ (75%, 48%) */}
-      <Beat t0={11.0} t1={12.45} gesture="point-right" place={{ kind: 'side', side: 'right', u: 0.29, v: 0.47, trace: true }}>
-        {projectItem('jarvis', '01', 'start')}
-      </Beat>
+      <TipBeat t0={11.15} t1={12.5} gesture="point-right" tips={[{ track: 'office-right', dir: 'right', node: projectItem('jarvis', '01') }]} />
 
       {/* 12.95–13.95s: points screen-left, fingertip ≈ (31%, 60%) */}
-      <Beat t0={12.95} t1={13.95} gesture="point-left" place={{ kind: 'side', side: 'left', u: 0.235, v: 0.58, trace: true }}>
-        {projectItem('forge-city', '02', 'end')}
-      </Beat>
+      <TipBeat t0={12.95} t1={13.98} gesture="point-left" tips={[{ track: 'office-left', dir: 'left', node: projectItem('forge-city', '02') }]} />
 
       {/* 14.4–15.85s: both index fingers out to the sides — two builds at once */}
-      <Beat t0={14.4} t1={15.85} gesture="both" place={{ kind: 'split' }}>
-        {projectItem('handchord', '03', 'start', true)}
-        {projectItem('offlinepay', '04', 'end', true)}
-      </Beat>
+      <TipBeat
+        t0={14.5}
+        t1={15.95}
+        gesture="both"
+        tips={[
+          { track: 'office-both-l', dir: 'left', node: projectItem('handchord', '03') },
+          { track: 'office-both-r', dir: 'right', node: projectItem('offlinepay', '04') },
+        ]}
+      />
 
       {/* 16.4–17.8s: looks and points up-right, fingertip ≈ (75%, 22%) */}
-      <Beat t0={16.4} t1={17.8} gesture="point-up" place={{ kind: 'side', side: 'right', u: 0.305, v: 0.46 }}>
-        {projectItem('ar-linkedin-suite', '05', 'start')}
-      </Beat>
+      <TipBeat t0={16.6} t1={17.95} gesture="point-up" tips={[{ track: 'office-up', dir: 'up', node: projectItem('ar-linkedin-suite', '05') }]} />
 
       {/* 18.1–19.8s: hands down, calm — the full index */}
       <Beat t0={18.1} t1={19.8} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">The full index</p>
         <h2 className="cinema-display-title cinema-scene-title mt-2">
-          {PROJECTS.length} builds, <Accent>all shipped</Accent>
+          <Title text={`${PROJECTS.length} builds, |all shipped|`} />
         </h2>
         <p className="gs-row mt-4">
           {PROJECTS.map((p) => (
@@ -301,36 +348,35 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       <Beat id="act-credentials" t0={20.3} t1={20.9} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">Away from the keyboard</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
-          Honors &amp; <Accent>diplomacy</Accent>
+          <Title text="Honors & |diplomacy|" />
         </h2>
       </Beat>
 
       {/* 21.0–22.35s: points screen-right, fingertip ≈ (73%, 60%) */}
-      <Beat t0={21.0} t1={22.35} gesture="point-right" place={{ kind: 'side', side: 'right', u: 0.28, v: 0.56, trace: true }}>
-        {credentialItem('nyc-mun-2023', '01', 'start')}
-      </Beat>
+      <TipBeat t0={21.15} t1={22.3} gesture="point-right" tips={[{ track: 'lab-right', dir: 'right', node: credentialItem('nyc-mun-2023', '01') }]} />
 
       {/* 22.9–23.9s: points screen-left, fingertip ≈ (31%, 65%) */}
-      <Beat t0={22.9} t1={23.9} gesture="point-left" place={{ kind: 'side', side: 'left', u: 0.235, v: 0.62, trace: true }}>
-        {credentialItem('mun-13-record', '02', 'end')}
-      </Beat>
+      <TipBeat t0={22.8} t1={23.98} gesture="point-left" tips={[{ track: 'lab-left', dir: 'left', node: credentialItem('mun-13-record', '02') }]} />
 
       {/* 24.4–25.4s: both fingers out */}
-      <Beat t0={24.4} t1={25.4} gesture="both" place={{ kind: 'split' }}>
-        {credentialItem('nimhans-cbt', '03', 'start', true)}
-        {credentialItem('school-captain', '04', 'end', true)}
-      </Beat>
+      <TipBeat
+        t0={24.5}
+        t1={25.45}
+        gesture="both"
+        tips={[
+          { track: 'lab-both-l', dir: 'left', node: credentialItem('nimhans-cbt', '03') },
+          { track: 'lab-both-r', dir: 'right', node: credentialItem('school-captain', '04') },
+        ]}
+      />
 
       {/* 25.9–26.9s: points up-right, fingertip ≈ (74%, 30%) */}
-      <Beat t0={25.9} t1={26.9} gesture="point-up" place={{ kind: 'side', side: 'right', u: 0.315, v: 0.52 }}>
-        {credentialItem('national-hackathons', '05', 'start')}
-      </Beat>
+      <TipBeat t0={25.9} t1={26.95} gesture="point-up" tips={[{ track: 'lab-up', dir: 'up', node: credentialItem('national-hackathons', '05') }]} />
 
       {/* 27.2–28.4s: calm — life off-screen and the full honors index */}
       <Beat t0={27.2} t1={28.4} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">{BEYOND_PILLARS.map((b) => b.title.split(/[,&]/)[0].trim()).join(' · ')}</p>
         <h2 className="cinema-display-title cinema-scene-title mt-2">
-          Beyond the <Accent>screen</Accent>
+          <Title text="Beyond the |screen|" />
         </h2>
         <p className="gs-row mt-4">
           {CREDENTIALS.map((c) => (
@@ -345,7 +391,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       <Beat id="section-contact" t0={28.6} t1={30} gesture="calm" place={{ kind: 'low' }} holdEnd>
         <p className="cinema-kicker">Direct contact</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
-          Let’s build something <Accent>unforgettable</Accent>
+          <Title text="Let’s build something |unforgettable|" />
         </h2>
         <p className="gs-row mt-4">
           <a className="cinema-link-action gs-link gs-link-strong" href={`mailto:${PROFILE.email}`}>
