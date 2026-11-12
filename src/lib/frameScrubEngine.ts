@@ -13,7 +13,7 @@ export interface ScrubFrameState {
 declare global {
   interface Window {
     /** Set by the inline script in index.html: the reel chosen for this device and its in-flight download. */
-    __reel?: { url: string; res?: Promise<Response> };
+    __reel?: { url: string };
   }
 }
 

@@ -51,6 +51,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     let rafId: number | null = null;
     let watchdogTimer: number | null = null;
     let restTimer: number | null = null;
+    let upgradeTimer: number | null = null;
     let revealFallbackTimer: number | null = null;
     let seekStartedAt = 0;
     let hasFirstFrame = false;
@@ -59,8 +60,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
     video.defaultMuted = true;
     video.muted = true;
-    // One download, held in memory: every scroll seek is then local. Streaming the URL while
-    // also fetching it made two transfers fight over the connection and stalled seeks on real networks.
     const root = document.documentElement;
     // Once the light reel is running, fetch the sharpest one this screen can show and swap it in.
     // The frame on screen is held in a canvas while the element reloads, so the swap is not seen.
@@ -121,46 +120,34 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
     };
 
-    const reelUrl = pickReelUrl();
-    // take the download index.html already started; a second mount (StrictMode) fetches again
-    const early = window.__reel?.res;
-    if (window.__reel) window.__reel.res = undefined;
-    void (early ?? fetch(reelUrl, { signal: abortCtrl.signal }))
-      .then(async (res) => {
-        if (!res.ok || !res.body) throw new Error(`reel ${res.status}`);
-        // Read in chunks so the loading line can show real progress
-        const total = Number(res.headers.get('content-length')) || 0;
-        const reader = res.body.getReader();
-        const chunks: BlobPart[] = [];
-        let loaded = 0;
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          loaded += value.byteLength;
-          if (total) {
-            root.style.setProperty('--reel-load', (loaded / total).toFixed(3));
-            root.style.setProperty('--reel-pct', String(Math.round((loaded / total) * 100)));
-          }
-        }
-        return new Blob(chunks, { type: 'video/mp4' });
-      })
-      .then((blob) => {
-        if (abortCtrl.signal.aborted) return;
-        blobUrl = URL.createObjectURL(blob);
-        video.src = blobUrl;
-        video.load();
-        root.dataset.reelReady = 'true';
-        void upgradeReel();
-      })
-      .catch(() => {
-        // Fall back to plain streaming if the in-memory download fails (e.g. low memory, flaky fetch)
-        if (abortCtrl.signal.aborted) return;
-        awaitingUpgrade = false;
-        video.src = reelUrl;
-        video.load();
-        root.dataset.reelReady = 'true';
-      });
+    // Stream the light reel so the film moves as soon as its first seconds arrive; waiting for the
+    // whole file left a frozen poster for ~25 s on a home connection. The 2K copy is fetched only
+    // once the light reel is fully buffered, so the two transfers never compete.
+    let upgradeStarted = false;
+    const startUpgrade = (): void => {
+      if (upgradeStarted || abortCtrl.signal.aborted) return;
+      upgradeStarted = true;
+      void upgradeReel();
+    };
+    const onProgress = (): void => {
+      const dur = video.duration;
+      if (!dur) return;
+      let have = 0;
+      for (let i = 0; i < video.buffered.length; i++) have += video.buffered.end(i) - video.buffered.start(i);
+      const f = Math.min(1, have / dur);
+      root.style.setProperty('--reel-load', f.toFixed(3));
+      root.style.setProperty('--reel-pct', String(Math.round(f * 100)));
+      if (f >= 0.99) startUpgrade();
+    };
+    const onFirstData = (): void => {
+      root.dataset.reelReady = 'true';
+    };
+    video.addEventListener('progress', onProgress);
+    video.addEventListener('loadeddata', onFirstData, { once: true });
+    // some browsers stop buffering a paused video early; upgrade anyway after a while
+    upgradeTimer = window.setTimeout(startUpgrade, 30000);
+    video.src = pickReelUrl();
+    video.load();
 
     const measureMaxScroll = (): void => {
       maxScrollRef.current = Math.max(
@@ -417,6 +404,9 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
     return () => {
       abortCtrl.abort();
+      if (upgradeTimer !== null) window.clearTimeout(upgradeTimer);
+      video.removeEventListener('progress', onProgress);
+      video.removeEventListener('loadeddata', onFirstData);
       if (watchdogTimer !== null) window.clearTimeout(watchdogTimer);
       if (restTimer !== null) window.clearTimeout(restTimer);
       if (revealFallbackTimer !== null) window.clearTimeout(revealFallbackTimer);
