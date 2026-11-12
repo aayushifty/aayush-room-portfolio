@@ -18,7 +18,7 @@ declare global {
 }
 
 /** The start reel: 1080p, small enough to arrive in seconds, sharp enough to be watched as it is. */
-export const pickReelUrl = (): string => window.__reel?.url ?? '/video/aayush-reel-1080.mp4?v=20261112s5';
+export const pickReelUrl = (): string => window.__reel?.url ?? '/video/aayush-reel-1080.mp4?v=20261112s6';
 
 /**
  * The sharpest reel this screen can actually show, fetched after the light one and swapped in.
@@ -36,7 +36,7 @@ export function pickUpgradeUrl(): string | null {
   // master drawn smaller than its pixels is simply at its crispest.
   const lowMemory = nav.deviceMemory !== undefined && nav.deviceMemory <= 2;
   // low-memory devices keep the 1080p start reel rather than holding a second, larger one
-  return lowMemory ? null : '/video/aayush-reel.mp4?v=20261112s5';
+  return lowMemory ? null : '/video/aayush-reel.mp4?v=20261112s6';
 }
 
 export const HERO_POSTER_URL = '/frames/clip1/001.webp?v=20261112s4';
