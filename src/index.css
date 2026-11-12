@@ -371,172 +371,24 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .cinema-ptr-parallax {
+    transform: translate3d(
+      calc(var(--ptr-x, 0) * -4px),
+      calc(var(--ptr-y, 0) * -2px),
+      0
+    );
+  }
+
   [data-cinema-beat] {
     transition:
       opacity 0.15s ease-out,
       visibility 0s linear 0.15s;
-    will-change: opacity, transform;
   }
 
   [data-cinema-beat][data-beat-phase='active'] {
     transition:
       opacity 0.44s var(--ease-expo-out) 0.14s,
       visibility 0s linear 0s;
-  }
-
-  [data-cinema-beat] [data-beat-stage] {
-    opacity: 0;
-    transform: translate3d(0, 18px, 0) scale(0.975);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-    backface-visibility: hidden;
-    will-change: opacity, transform;
-  }
-
-  [data-cinema-beat][data-align='left'] [data-beat-stage] {
-    transform: translate3d(22px, 10px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='right'] [data-beat-stage] {
-    transform: translate3d(-22px, 10px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='bottom'] [data-beat-stage] {
-    transform: translate3d(0, 18px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-gesture='point-down'] [data-beat-stage] {
-    transform: translate3d(0, -16px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-gesture='point-upright'] [data-beat-stage],
-  [data-cinema-beat][data-gesture='navy-upright'] [data-beat-stage] {
-    transform: translate3d(-20px, 18px, 0) scale(0.975);
-  }
-
-  [data-cinema-beat][data-align='split'] [data-beat-stage] > :first-child {
-    transform: translate3d(20px, 0, 0);
-    transition: transform 0.65s var(--ease-spring) 0.08s;
-  }
-
-  [data-cinema-beat][data-align='split'] [data-beat-stage] > :last-child {
-    transform: translate3d(-20px, 0, 0);
-    transition: transform 0.65s var(--ease-spring) 0.08s;
-  }
-
-  [data-cinema-beat][data-align='split'][data-beat-phase='active'] [data-beat-stage] > :first-child,
-  [data-cinema-beat][data-align='split'][data-beat-phase='active'] [data-beat-stage] > :last-child {
-    transform: translate3d(0, 0, 0);
-  }
-
-  /* Word-by-word subtitle entrance for opening greeting ("Hi, I'm Aayush.") */
-  [data-cinema-beat] .cinema-word-reveal {
-    display: inline-block;
-    opacity: 0;
-    transform: translate3d(0, 14px, 0);
-    transition:
-      opacity 0.22s ease-out,
-      transform 0.28s var(--ease-expo-out);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-reveal {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.45s var(--ease-expo-out) 0.05s,
-      transform 0.65s var(--ease-spring) 0.05s;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-delay-1 {
-    transition-delay: 0.15s;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-word-delay-2 {
-    transition-delay: 0.25s;
-  }
-
-  [data-cinema-beat][data-beat-phase='after'] [data-beat-stage] {
-    opacity: 0;
-    transform: translate3d(0, -14px, 0) scale(0.985);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] [data-beat-stage] {
-    opacity: 1;
-    transform: translate3d(
-        calc(var(--ptr-x, 0) * -5px),
-        calc(var(--ptr-y, 0) * -3px),
-        0
-      )
-      scale(1);
-    transition:
-      opacity 0.44s var(--ease-expo-out) 0.14s,
-      transform 0.72s var(--ease-spring) 0.08s;
-  }
-
-  /* Slanted anamorphic mask wipe for display headlines without continuous transition restarts */
-  [data-cinema-beat] .cinema-display-title {
-    clip-path: polygon(0 100%, 100% 88%, 100% 100%, 0 100%);
-    transform: translate3d(0, 12px, 0);
-    transition:
-      clip-path 0.18s ease-out,
-      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-display-title {
-    clip-path: polygon(-6% -18%, 108% -18%, 108% 124%, -6% 124%);
-    transform: translate3d(calc(var(--ptr-x, 0) * -2px), 0, 0);
-    transition:
-      clip-path 0.6s var(--ease-expo-out) 0.09s,
-      transform 0.68s var(--ease-spring) 0.09s;
-  }
-
-  [data-cinema-beat] .cinema-kicker {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.2s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-kicker {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.4s var(--ease-expo-out) 0.12s,
-      transform 0.56s var(--ease-spring) 0.1s;
-  }
-
-  [data-cinema-beat] .cinema-subtitle {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-    transition:
-      opacity 0.14s ease-out,
-      transform 0.2s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-subtitle {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      opacity 0.44s var(--ease-expo-out) 0.16s,
-      transform 0.6s var(--ease-spring) 0.14s;
-  }
-
-  [data-cinema-beat] .cinema-accent-beam {
-    transform: scaleX(0);
-    opacity: 0;
-    transition:
-      transform 0.18s ease-out,
-      opacity 0.14s ease-out;
-  }
-
-  [data-cinema-beat][data-beat-phase='active'] .cinema-accent-beam {
-    transform: scaleX(1);
-    opacity: 1;
-    transition:
-      transform 0.62s var(--ease-spring) 0.16s,
-      opacity 0.34s ease-out 0.14s;
   }
 }
 
@@ -694,4 +546,532 @@ dialog.dossier-dialog::backdrop {
   ::view-transition-new(*) {
     animation: none !important;
   }
+}
+
+/* ── Gesture stage ─────────────────────────────────────────────────────────────────────────────
+   Every block is anchored to a point in the video frame, so text stays beside the hand that
+   points at it at any window shape. --vidw/--vidh are the rendered size of the object-cover
+   16:9 video (it is positioned at 50% 24%). */
+.gs-beat {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  --vidw: max(100vw, 177.78dvh);
+  --vidh: max(100dvh, 56.25vw);
+  --gs-accent: #f5c46b;
+  --act-accent: var(--gs-accent);
+}
+
+.gs-beat[data-act='1'] {
+  --gs-accent: #ffb4c4;
+}
+
+.gs-beat[data-act='2'] {
+  --gs-accent: #7fe9df;
+}
+
+.gs-accent {
+  color: var(--gs-accent);
+  font-weight: inherit;
+}
+
+.gs-anchor {
+  position: absolute;
+}
+
+/* Bottom vignette under low-centre blocks: full width, so it has no visible edge */
+.gs-low::before {
+  content: '';
+  position: absolute;
+  inset: -30% -26%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(6 8 13 / 0.66), rgb(6 8 13 / 0.36) 58%, transparent);
+}
+
+.gs-side {
+  top: calc((100dvh - var(--vidh)) * 0.24 + var(--v) * var(--vidh));
+  translate: 0 -50%;
+  width: min(27rem, calc(50vw - var(--u) * var(--vidw) - 2.4vw));
+}
+
+.gs-side[data-side='right'] {
+  left: calc(50vw + var(--u) * var(--vidw));
+}
+
+.gs-side[data-side='left'] {
+  right: calc(50vw + var(--u) * var(--vidw));
+}
+
+.gs-low {
+  left: 50%;
+  translate: -50% 0;
+  bottom: max(6dvh, 2.5rem);
+  width: min(60rem, 90vw);
+  text-align: center;
+}
+
+.gs-low::before {
+  inset: -70% -50vw -30vh;
+  background: linear-gradient(0deg, rgb(6 8 13 / 0.92) 12%, rgb(6 8 13 / 0.6) 52%, transparent);
+}
+
+.gs-split {
+  left: 3vw;
+  right: 3vw;
+  bottom: max(8dvh, 3rem);
+}
+
+.gs-split::before {
+  inset: -40% -3vw -30vh;
+  background: linear-gradient(0deg, rgb(6 8 13 / 0.9) 10%, rgb(6 8 13 / 0.5) 55%, transparent);
+}
+
+.gs-split > [data-beat-stage] {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.gs-split article {
+  width: min(24rem, 27vw);
+}
+
+[data-text='end'] {
+  text-align: right;
+}
+
+[data-text='end'] .cinema-subtitle,
+[data-text='end'] .cinema-accent-beam {
+  margin-left: auto;
+}
+
+.gs-beat .cinema-accent-beam {
+  background: linear-gradient(90deg, var(--gs-accent), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--gs-accent) 45%, transparent);
+}
+
+.gs-beat [data-text='end'] .cinema-accent-beam {
+  background: linear-gradient(270deg, var(--gs-accent), transparent);
+  transform-origin: 100% 50%;
+}
+
+.gs-low .cinema-accent-beam {
+  margin-inline: auto;
+}
+
+/* Outlined ghost numeral above each item */
+.gs-index {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 1.6rem + 3vw, 5rem);
+  line-height: 0.82;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--gs-accent) 80%, transparent);
+  margin-bottom: 0.4rem;
+}
+
+.gs-metric {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--gs-accent);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.95);
+}
+
+.gs-link {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.gs-link:hover,
+.gs-link:focus-visible {
+  color: var(--gs-accent);
+}
+
+.gs-link-strong {
+  color: var(--gs-accent);
+  font-size: 0.95rem;
+}
+
+.gs-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 1.5rem;
+}
+
+.gs-cue {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(241 245 249 / 0.85);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.95);
+}
+
+.gs-cue-ready {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+:root[data-reel-ready] .gs-cue-loading {
+  display: none;
+}
+
+:root[data-reel-ready] .gs-cue-ready {
+  display: inline-flex;
+}
+
+/* Download progress for the reel: a hairline along the bottom edge, gone once it is in memory */
+.reel-loadbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 2px;
+  z-index: 60;
+  background: #f5c46b;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--reel-load, 0));
+  transition: transform 0.2s linear, opacity 0.5s ease 0.2s;
+}
+
+:root[data-reel-ready] .reel-loadbar {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A hairline shoots from the fingertip to the block when he points */
+  .gs-side[data-trace]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: clamp(1.25rem, 3vw, 3.25rem);
+    height: 1.5px;
+    opacity: 0;
+    scale: 0 1;
+    transition: scale 0.18s ease-out, opacity 0.14s ease-out;
+  }
+
+  .gs-side[data-trace][data-side='right']::after {
+    right: calc(100% + 0.6vw);
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, transparent, var(--gs-accent));
+  }
+
+  .gs-side[data-trace][data-side='left']::after {
+    left: calc(100% + 0.6vw);
+    transform-origin: 100% 50%;
+    background: linear-gradient(270deg, transparent, var(--gs-accent));
+  }
+
+  [data-beat-phase='active'] > .gs-side[data-trace]::after {
+    opacity: 0.95;
+    scale: 1 1;
+    transition:
+      scale 0.5s var(--ease-expo-out) 0.02s,
+      opacity 0.3s ease-out;
+  }
+
+  .gs-cue-ready svg {
+    animation: gs-nudge 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes gs-nudge {
+  50% {
+    translate: 0 4px;
+  }
+}
+
+/* Phones and tall windows crop the hands out of frame, so blocks dock to the bottom instead */
+@media (max-width: 699px), (max-aspect-ratio: 5/4) {
+  .gs-low .cinema-hero-title {
+    font-size: clamp(2.3rem, 10.5vw, 3.2rem);
+  }
+
+  .gs-anchor.gs-side[data-side],
+  .gs-anchor.gs-low,
+  .gs-anchor.gs-split {
+    inset: auto 5vw max(4.5dvh, 1.5rem) 5vw;
+    width: auto;
+    translate: none;
+  }
+
+  .gs-side::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .gs-low::before,
+  .gs-side::before {
+    inset: -45vh -5vw -10vh;
+    background: linear-gradient(0deg, rgb(6 8 13 / 0.94) 14%, rgb(6 8 13 / 0.62) 55%, transparent);
+  }
+
+  .gs-side[data-trace]::after {
+    display: none;
+  }
+
+  .gs-side [data-text],
+  .gs-split [data-text] {
+    text-align: left;
+  }
+
+  .gs-side .cinema-subtitle,
+  .gs-side .cinema-accent-beam,
+  .gs-split .cinema-accent-beam {
+    margin-left: 0;
+  }
+
+  .gs-beat [data-text='end'] .cinema-accent-beam {
+    background: linear-gradient(90deg, var(--gs-accent), transparent);
+    transform-origin: 0 50%;
+  }
+
+  .gs-split > [data-beat-stage] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .gs-split article {
+    width: auto;
+  }
+
+  .gs-split .cinema-subtitle,
+  .gs-split .gs-index,
+  .gs-split .gs-metric {
+    display: none;
+  }
+}
+
+/* ── Fingertip-tracked blocks ──────────────────────────────────────────────────────────────────
+   lib/fingertips.ts writes the fingertip's screen position (--fx/--fy, and --fxr/--fyb measured
+   from the right/bottom edge) every scroll frame and picks data-fit from the room available. */
+.gs-tip[data-fit='beside'] {
+  top: var(--fy);
+  translate: 0 -50%;
+  width: min(27rem, var(--room));
+}
+
+.gs-tip[data-fit='beside'][data-dir='right'],
+.gs-tip[data-fit='beside'][data-dir='up'] {
+  left: calc(var(--fx) + var(--gap));
+  --origin: calc(-1 * var(--gap)) 50%;
+}
+
+/* Raised finger: the block hangs down from fingertip height, clear of the hand below it */
+.gs-tip[data-fit='beside'][data-dir='up'] {
+  translate: 0 -1.4rem;
+  --origin: calc(-1 * var(--gap)) 1.4rem;
+}
+
+.gs-tip[data-fit='beside'][data-dir='left'] {
+  right: calc(var(--fxr) + var(--gap));
+  --origin: calc(100% + var(--gap)) 50%;
+}
+
+/* Not enough room beside the finger: a compact block sits directly over the hand */
+/* explicit width: the block is a size container, so it cannot shrink-to-fit its text */
+.gs-tip[data-fit='above'] {
+  bottom: calc(var(--fyb) + var(--gap) * 1.6);
+  width: min(22rem, 44vw);
+}
+
+.gs-tip[data-fit='above'][data-tight] {
+  bottom: auto;
+  top: max(3.4rem, calc(var(--fy) - 1.3rem));
+  width: min(20rem, 30vw);
+}
+
+.gs-tip[data-fit='above'][data-tight]:not([data-dir='left']) {
+  right: calc(var(--fxr) + var(--gap));
+  --origin: calc(100% + var(--gap)) 1.3rem;
+}
+
+.gs-tip[data-fit='above'][data-tight][data-dir='left'] {
+  left: calc(var(--fx) + var(--gap));
+  --origin: calc(-1 * var(--gap)) 1.3rem;
+}
+
+.gs-tip[data-tight] .cinema-kicker,
+.gs-tip[data-tight] .cinema-accent-beam {
+  display: none;
+}
+
+.gs-tip[data-tight] .cinema-link-action {
+  position: absolute;
+  inset: 0;
+  min-block-size: 0;
+  opacity: 0;
+}
+
+.gs-tip[data-tight] .cinema-link-action:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--gs-accent);
+  color: transparent;
+}
+
+.gs-tip[data-fit='above'][data-dir='left'] {
+  left: 2.4vw;
+  --origin: 15% calc(100% + var(--gap));
+}
+
+.gs-tip[data-fit='above']:not([data-dir='left']) {
+  right: 2.4vw;
+  --origin: 85% calc(100% + var(--gap));
+}
+
+.gs-tip[data-fit='above'] .cinema-subtitle,
+.gs-tip[data-fit='above'] .gs-metric,
+.gs-tip[data-fit='above'] .gs-index {
+  display: none;
+}
+
+/* Phones: hands are out of frame, so the blocks stack at the bottom */
+.gs-beat[data-dock] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0 5vw max(4.5dvh, 1.5rem);
+  background: linear-gradient(0deg, rgb(6 8 13 / 0.94) 10%, rgb(6 8 13 / 0.6) 42%, transparent 70%);
+}
+
+.gs-tip[data-fit='dock'] {
+  position: relative;
+}
+
+.gs-beat[data-dock='2'] .cinema-subtitle,
+.gs-beat[data-dock='2'] .gs-metric,
+.gs-beat[data-dock='2'] .gs-index {
+  display: none;
+}
+
+/* Spark sitting on the fingertip */
+.gs-spark {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 10px 3px var(--gs-accent),
+    0 0 28px 9px color-mix(in srgb, var(--gs-accent) 55%, transparent);
+  opacity: var(--beat-a, 0);
+  pointer-events: none;
+}
+
+.gs-spark[data-fit='dock'],
+.gs-spark:not([data-fit]) {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Hairline from the finger to the block */
+  .gs-tip[data-fit='beside']::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(var(--gap) - 8px);
+    height: 1.5px;
+    opacity: 0;
+    scale: 0 1;
+    transition: scale 0.16s ease-out, opacity 0.12s ease-out;
+  }
+
+  .gs-tip[data-fit='beside'][data-dir='right']::after,
+  .gs-tip[data-fit='beside'][data-dir='up']::after {
+    right: 100%;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, #fff, var(--gs-accent));
+  }
+
+  .gs-tip[data-fit='beside'][data-dir='up']::after {
+    top: 1.4rem;
+  }
+
+  .gs-tip[data-fit='beside'][data-dir='left']::after {
+    left: 100%;
+    transform-origin: 100% 50%;
+    background: linear-gradient(270deg, #fff, var(--gs-accent));
+  }
+
+  [data-beat-phase='active'] > .gs-tip[data-fit='beside']::after {
+    opacity: 0.95;
+    scale: 1 1;
+    transition: scale 0.45s var(--ease-expo-out), opacity 0.25s ease-out;
+  }
+
+}
+
+/* ── In-place entrances ───────────────────────────────────────────────────────────────────────
+   Every block appears where it stands; nothing travels. Each beat picks one effect (data-fx),
+   all driven by --beat-a (0..1), which follows the video frame on screen. */
+.gs-beat[data-cinema-beat] {
+  opacity: min(1, calc(var(--beat-a, 0) * 5)) !important;
+  transition: none;
+}
+
+/* Plain fade */
+.gs-beat[data-fx='fade'] [data-beat-stage] {
+  opacity: var(--beat-a, 1);
+}
+
+/* Focus pull: comes into focus where it stands */
+.gs-beat[data-fx='focus'] [data-beat-stage] {
+  opacity: var(--beat-a, 1);
+  filter: blur(calc((1 - var(--beat-a, 1)) * 16px));
+}
+
+/* Wipe: revealed across the block, starting from the side nearest the finger */
+.gs-beat[data-fx='wipe'] [data-beat-stage] {
+  --edge: calc(var(--beat-a, 1) * 135%);
+  --wipe: linear-gradient(var(--wipe-dir, 90deg), #000 calc(var(--edge) - 35%), transparent var(--edge));
+  -webkit-mask-image: var(--wipe);
+  mask-image: var(--wipe);
+}
+
+.gs-tip[data-text='end'] {
+  --wipe-dir: 270deg;
+}
+
+/* Dots: fine dots swell until they merge into solid type */
+.gs-beat[data-fx='dots'] [data-beat-stage] {
+  --dot: var(--beat-a, 1);
+  --dots:
+    radial-gradient(circle, #000 calc(var(--dot) * 3.8px), transparent calc(var(--dot) * 3.8px + 0.6px)),
+    radial-gradient(circle, #000 calc(var(--dot) * 6px), transparent calc(var(--dot) * 6px + 0.6px));
+  -webkit-mask-image: var(--dots);
+  mask-image: var(--dots);
+  -webkit-mask-size: 5px 5px, 8px 8px;
+  mask-size: 5px 5px, 8px 8px;
+  -webkit-mask-position: 0 0, 2px 3px;
+  mask-position: 0 0, 2px 3px;
+}
+
+/* Whatever the entrance, a fingertip block leaves the same way: erased from the top down by
+   --drop, the fraction of its fall the hand has completed in the frame on screen. */
+.gs-beat[data-tips][data-beat-side='out'] [data-beat-stage] {
+  --gone: calc(var(--drop, 0) * 135%);
+  --drop: linear-gradient(180deg, transparent calc(var(--gone) - 35%), #000 var(--gone));
+  opacity: 1;
+  filter: none;
+  -webkit-mask-image: var(--drop);
+  mask-image: var(--drop);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
 }
