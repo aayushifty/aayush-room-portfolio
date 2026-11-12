@@ -71,11 +71,22 @@ const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd,
 };
 
 /**
- * Headline that reveals letter by letter. Wrap the accented part in pipes: "Things I’ve |built|".
+ * Headline whose letters assemble from scattered particles as the block fades in. Wrap the accented part in pipes: "Things I’ve |built|".
  * Screen readers get the plain sentence; the animated letters are hidden from them.
  */
 const Title: React.FC<{ text: string }> = ({ text }) => {
   let i = 0;
+  // deterministic scatter per letter, so server and client renders match
+  const rand = (n: number): number => {
+    const x = Math.sin(n * 12.9898) * 43758.5453;
+    return x - Math.floor(x) - 0.5;
+  };
+  const scatter = (n: number): React.CSSProperties =>
+    ({
+      '--dx': `${(rand(n) * 3.4).toFixed(2)}em`,
+      '--dy': `${(rand(n + 0.37) * 2.6).toFixed(2)}em`,
+      '--r': `${(rand(n + 0.71) * 110).toFixed(0)}deg`,
+    }) as React.CSSProperties;
   return (
     <>
       <span className="sr-only">{text.replace(/\|/g, '')}</span>
@@ -87,7 +98,7 @@ const Title: React.FC<{ text: string }> = ({ text }) => {
             ) : (
               <span key={w} className="gs-w">
                 {[...word].map((ch, c) => (
-                  <span key={c} className="gs-c" style={{ '--i': i++ } as React.CSSProperties}>
+                  <span key={c} className="gs-c" style={scatter(i++)}>
                     {ch}
                   </span>
                 ))}

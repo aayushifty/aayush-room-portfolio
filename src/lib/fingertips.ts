@@ -39,6 +39,13 @@ export function fingertipAt(track: string, t: number): [x: number, y: number] | 
   return [last[1], last[2]];
 }
 
+/** Where the finger rests during the gesture: the sample nearest the middle of the track. */
+function holdPoint(track: string): [x: number, y: number] | null {
+  const samples = TRACKS[track];
+  if (!samples) return null;
+  return fingertipAt(track, (samples[0][0] + samples[samples.length - 1][0]) / 2);
+}
+
 type Fit = 'beside' | 'above' | 'dock';
 
 /**
@@ -46,7 +53,7 @@ type Fit = 'beside' | 'above' | 'dock';
  * Chooses how the block sits by the room actually left on screen:
  *   beside – next to the finger, on the side it points to
  *   above  – compact, directly over the hand (window too narrow to fit beside);
- *            trimmed to title + link when the finger is raised near the top bar
+ *            when the finger is raised near the top bar, just the title beside the finger
  *   dock   – bottom of the screen (phones: the hands are cropped out of frame)
  */
 export function applyFingertips(t: number): void {
@@ -73,14 +80,16 @@ export function applyFingertips(t: number): void {
       if (!point) continue;
       const sx = W / 2 + (point[0] - 0.5) * vidW;
       const sy = (H - vidH) * 0.24 + point[1] * vidH;
-      const room = (el.dataset.dir === 'left' ? sx : W - sx) - gap - margin;
-      const onScreen = sx > 0 && sx < W;
-      // headroom between the top bar and the fingertip decides how much can stack above the hand
-      const headroom = sy - 48;
-      const fit: Fit =
-        W < 700 ? 'dock' : room >= 190 ? 'beside' : onScreen && headroom >= 62 ? 'above' : 'dock';
+      // The layout is chosen from where the finger HOLDS, not where it is this frame,
+      // so a block never jumps between layouts while the hand is moving.
+      const hold = holdPoint(el.dataset.tip ?? '') ?? point;
+      const hx = W / 2 + (hold[0] - 0.5) * vidW;
+      const hy = (H - vidH) * 0.24 + hold[1] * vidH;
+      const room = (el.dataset.dir === 'left' ? hx : W - hx) - gap - margin;
+      const fit: Fit = W < 700 || hx <= 0 || hx >= W ? 'dock' : room >= 190 ? 'beside' : 'above';
       if (fit === 'dock') anyDock = true;
-      placed.push({ el, sx, sy, room, fit, tight: fit === 'above' && headroom < 200 });
+      // tight: too little space between the top bar and the finger to stack a block over the hand
+      placed.push({ el, sx, sy, room, fit, tight: fit === 'above' && hy - 48 < 200 });
     }
 
     const dock = anyDock ? String(placed.length) : '';
