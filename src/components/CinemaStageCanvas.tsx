@@ -12,7 +12,6 @@ import {
 
 export interface CinemaStageCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  isAutoPlayingRef: React.MutableRefObject<boolean>;
   reducedMotion: boolean;
   onActChange: (actIndex: 0 | 1 | 2) => void;
   onScrollProgress?: (globalProgress: number) => void;
@@ -20,7 +19,6 @@ export interface CinemaStageCanvasProps {
 
 export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
   videoRef,
-  isAutoPlayingRef,
   reducedMotion,
   onActChange,
   onScrollProgress,
@@ -119,7 +117,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     };
 
     const flushSeek = (): void => {
-      if (isAutoPlayingRef.current) return;
       if (video.readyState < 1) return;
       if (!video.paused) {
         video.pause();
@@ -149,6 +146,32 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       }
     };
 
+    // Media time of the frame currently on screen (-1 until the first frame is presented).
+    // Text is painted from this, not from the scroll target: during a fast scroll the decoder
+    // lags a few frames, and text driven by scroll would run ahead of the hand in the picture.
+    let shownTime = -1;
+    let frameCallbackId = 0;
+
+    const paintOverlays = (): void => {
+      const t = shownTime >= 0 ? shownTime : desiredTimeRef.current;
+      const state = resolveUnifiedTimeline(t / getDuration(), 1);
+      applyBeatVisuals(state, reducedMotionRef.current);
+      applyFingertips(t);
+      if (state.activeClip !== lastActRef.current) {
+        lastActRef.current = state.activeClip;
+        onActChangeRef.current(state.activeClip);
+      }
+    };
+
+    const onFramePresented = (_now: number, meta: VideoFrameCallbackMetadata): void => {
+      shownTime = meta.mediaTime;
+      paintOverlays();
+      frameCallbackId = video.requestVideoFrameCallback(onFramePresented);
+    };
+    if ('requestVideoFrameCallback' in video) {
+      frameCallbackId = video.requestVideoFrameCallback(onFramePresented);
+    }
+
     const syncTimeline = (): void => {
       const state = resolveUnifiedTimeline(window.scrollY, maxScrollRef.current);
       const dur = getDuration();
@@ -161,17 +184,9 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         videoLayer.style.transform = 'none';
       }
 
-      if (!isAutoPlayingRef.current) {
-        flushSeek();
-      }
+      flushSeek();
 
-      applyBeatVisuals(state, reducedMotionRef.current);
-      applyFingertips(desiredTimeRef.current);
-
-      if (state.activeClip !== lastActRef.current) {
-        lastActRef.current = state.activeClip;
-        onActChangeRef.current(state.activeClip);
-      }
+      paintOverlays();
       onScrollProgressRef.current?.(state.globalProgress);
     };
 
@@ -195,18 +210,17 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
 
     const onSeeked = (): void => {
       revealVideo();
-      if (!isAutoPlayingRef.current) {
-        flushSeek();
-      }
+      // also covers browsers without requestVideoFrameCallback and hidden tabs where it does not fire
+      shownTime = video.currentTime;
+      paintOverlays();
+      flushSeek();
     };
 
     const onCanPlay = (): void => {
       if (Math.abs(video.currentTime - desiredTimeRef.current) <= 0.35 || desiredTimeRef.current <= 0.15) {
         revealVideo();
       }
-      if (!isAutoPlayingRef.current) {
-        flushSeek();
-      }
+      flushSeek();
     };
 
     video.addEventListener('loadedmetadata', flushSeek);
@@ -291,6 +305,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       video.removeEventListener('loadeddata', onLoadedData);
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('seeked', onSeeked);
+      if (frameCallbackId) video.cancelVideoFrameCallback(frameCallbackId);
       window.removeEventListener('scroll', scheduleSync);
       window.removeEventListener('resize', scheduleSync);
       window.removeEventListener('pointermove', onPointerMove);
@@ -298,7 +313,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
         URL.revokeObjectURL(blobUrl);
       }
     };
-  }, [isAutoPlayingRef, reducedMotion, videoRef]);
+  }, [reducedMotion, videoRef]);
 
   return (
     <div

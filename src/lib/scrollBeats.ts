@@ -175,6 +175,8 @@ export function applyBeatVisuals(
     }
 
     const mid = (inEnd + outStart) * 0.5;
+    const side = p < mid ? 'in' : 'out';
+    if (el.dataset.beatSide !== side) el.dataset.beatSide = side;
     const halfSpan = Math.max(0.05, (outEnd - inStart) * 0.5);
     const centeredU = clamp01(((p - mid) / halfSpan) * 0.5 + 0.5) * 2 - 1;
 

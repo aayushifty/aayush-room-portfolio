@@ -10,7 +10,7 @@ export interface ScrubFrameState {
   globalProgress: number;
 }
 
-export const VIDEO_ASSET_URL = '/video/aayush-reel.mp4?v=20261112r30';
+export const VIDEO_ASSET_URL = '/video/aayush-reel.mp4?v=20261112r30m';
 export const HERO_POSTER_URL = '/frames/clip1/001.webp?v=20261112r30';
 
 export function getClipMeta(clipIndex: 0 | 1 | 2) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Check, Copy, RotateCcw } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Check, Copy } from 'lucide-react';
 import {
   BEYOND_PILLARS,
   CREDENTIALS,
@@ -15,7 +15,6 @@ import { beatDataAttrs, span, type Gesture } from '@/lib/scrollBeats';
 export interface GestureStageProps {
   onSelectProject: (item: ProjectItem) => void;
   onSelectCredential: (item: CredentialItem) => void;
-  onReplayFromStart: () => void;
   onBackToTop: () => void;
 }
 
@@ -28,9 +27,13 @@ type Place =
   | { kind: 'low' }
   | { kind: 'side'; side: 'left' | 'right'; u: number; v: number };
 
+/** How a block appears, in place: plain fade, focus pull, directional wipe, or dot formation. */
+type Fx = 'fade' | 'focus' | 'wipe' | 'dots';
+
 interface BeatProps {
   t0: number;
   t1: number;
+  fx: Fx;
   gesture: Gesture;
   place: Place;
   holdStart?: boolean;
@@ -39,7 +42,7 @@ interface BeatProps {
   children: React.ReactNode;
 }
 
-const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd, id, children }) => {
+const Beat: React.FC<BeatProps> = ({ t0, t1, fx, gesture, place, holdStart, holdEnd, id, children }) => {
   const align = place.kind === 'side' ? place.side : 'bottom';
   const anchorStyle =
     place.kind === 'side'
@@ -50,6 +53,7 @@ const Beat: React.FC<BeatProps> = ({ t0, t1, gesture, place, holdStart, holdEnd,
     <section
       id={id}
       className="gs-beat"
+      data-fx={fx}
       data-align={align}
       data-act={Math.min(2, Math.floor(t0 / 10))}
       {...beatDataAttrs(span(t0, t1, { gesture, holdStart, holdEnd }))}
@@ -100,11 +104,13 @@ const TipBeat: React.FC<{
   rise: number;
   lower: number;
   t1: number;
+  fx: Fx;
   gesture: Gesture;
   tips: Tip[];
-}> = ({ t0, rise, lower, t1, gesture, tips }) => (
+}> = ({ t0, rise, lower, t1, fx, gesture, tips }) => (
   <section
     className="gs-beat"
+    data-fx={fx}
     data-tips="true"
     data-act={Math.min(2, Math.floor(t0 / 10))}
     {...beatDataAttrs(span(t0, t1, { gesture, formed: rise, fading: lower }))}
@@ -169,7 +175,6 @@ const short = (id: string, fallback: string): string => SHORT[id] ?? fallback;
 export const GestureStage: React.FC<GestureStageProps> = ({
   onSelectProject,
   onSelectCredential,
-  onReplayFromStart,
   onBackToTop,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -223,7 +228,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       {/* ───────── 0–10s · studio · grey hoodie ───────── */}
 
       {/* 0.0–1.7s: he waves at the camera — the greeting is the subtitle to that wave */}
-      <Beat id="act-studio" t0={0} t1={1.75} gesture="wave" place={{ kind: 'low' }} holdStart>
+      <Beat id="act-studio" t0={0} fx="fade" t1={1.75} gesture="wave" place={{ kind: 'low' }} holdStart>
         <p className="cinema-kicker">{PROFILE.location}</p>
         <h1 className="cinema-display-title cinema-hero-title mt-2">
           <Title text="Hi, I’m |Aayush.|" />
@@ -240,7 +245,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 2.0–3.4s: he turns to profile, facing screen-right — the line sits where he looks */}
-      <Beat t0={1.95} t1={3.4} gesture="turn" place={{ kind: 'side', side: 'right', u: 0.16, v: 0.47 }}>
+      <Beat t0={1.95} fx="focus" t1={3.4} gesture="turn" place={{ kind: 'side', side: 'right', u: 0.16, v: 0.47 }}>
         <article data-text="start">
           <p className="cinema-kicker">
             {PROFILE.fullName} · {PROFILE.handle}
@@ -256,26 +261,26 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 3.6–4.9s: back to camera, the workstation is in view */}
-      <Beat t0={3.6} t1={4.9} gesture="turn" place={{ kind: 'side', side: 'left', u: 0.16, v: 0.5 }}>
+      <Beat t0={3.6} fx="wipe" t1={4.9} gesture="turn" place={{ kind: 'side', side: 'left', u: 0.16, v: 0.5 }}>
         {discipline(0, 'end')}
       </Beat>
 
       {/* 5.05–6.3s: coming back round */}
-      <Beat t0={5.05} t1={6.3} gesture="turn" place={{ kind: 'side', side: 'right', u: 0.17, v: 0.5 }}>
+      <Beat t0={5.05} fx="dots" t1={6.3} gesture="turn" place={{ kind: 'side', side: 'right', u: 0.17, v: 0.5 }}>
         {discipline(1, 'start')}
       </Beat>
 
       {/* 6.6–9.75s: facing camera, lights dim — two calm beats either side of him */}
-      <Beat t0={6.6} t1={8.1} gesture="calm" place={{ kind: 'side', side: 'left', u: 0.17, v: 0.5 }}>
+      <Beat t0={6.6} fx="focus" t1={8.1} gesture="calm" place={{ kind: 'side', side: 'left', u: 0.17, v: 0.5 }}>
         {discipline(2, 'end')}
       </Beat>
-      <Beat t0={8.3} t1={9.75} gesture="calm" place={{ kind: 'side', side: 'right', u: 0.17, v: 0.5 }}>
+      <Beat t0={8.3} fx="wipe" t1={9.75} gesture="calm" place={{ kind: 'side', side: 'right', u: 0.17, v: 0.5 }}>
         {discipline(3, 'start')}
       </Beat>
 
       {/* ───────── 10–20s · glass office · pink tee ───────── */}
 
-      <Beat id="act-works" t0={10.25} t1={10.9} gesture="calm" place={{ kind: 'low' }}>
+      <Beat id="act-works" t0={10.25} fx="focus" t1={10.9} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">Selected work</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
           <Title text="Things I’ve |built|" />
@@ -283,14 +288,14 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 11.0–12.45s: points screen-right, fingertip ≈ (75%, 48%) */}
-      <TipBeat t0={11} rise={11.5} lower={12.25} t1={12.6} gesture="point-right" tips={[{ track: 'office-right', dir: 'right', node: projectItem('jarvis') }]} />
+      <TipBeat t0={11} fx="wipe" rise={11.5} lower={12.25} t1={12.6} gesture="point-right" tips={[{ track: 'office-right', dir: 'right', node: projectItem('jarvis') }]} />
 
       {/* 12.95–13.95s: points screen-left, fingertip ≈ (31%, 60%) */}
-      <TipBeat t0={12.9} rise={13.25} lower={13.75} t1={14.05} gesture="point-left" tips={[{ track: 'office-left', dir: 'left', node: projectItem('forge-city') }]} />
+      <TipBeat t0={12.9} fx="dots" rise={13.25} lower={13.75} t1={14.05} gesture="point-left" tips={[{ track: 'office-left', dir: 'left', node: projectItem('forge-city') }]} />
 
       {/* 14.4–15.85s: both index fingers out to the sides — two builds at once */}
       <TipBeat
-        t0={14.45}
+        t0={14.45} fx="focus"
         rise={15}
         lower={15.75}
         t1={16.05}
@@ -302,10 +307,10 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       />
 
       {/* 16.4–17.8s: looks and points up-right, fingertip ≈ (75%, 22%) */}
-      <TipBeat t0={16.5} rise={17} lower={17.75} t1={18.05} gesture="point-up" tips={[{ track: 'office-up', dir: 'up', node: projectItem('ar-linkedin-suite') }]} />
+      <TipBeat t0={16.5} fx="wipe" rise={17} lower={17.75} t1={18.05} gesture="point-up" tips={[{ track: 'office-up', dir: 'up', node: projectItem('ar-linkedin-suite') }]} />
 
       {/* 18.1–19.8s: hands down, calm — the full index */}
-      <Beat t0={18.1} t1={19.8} gesture="calm" place={{ kind: 'low' }}>
+      <Beat t0={18.1} fx="fade" t1={19.8} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">The full index</p>
         <h2 className="cinema-display-title cinema-scene-title mt-2">
           <Title text={`${PROJECTS.length} builds, |all shipped|`} />
@@ -321,7 +326,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
 
       {/* ───────── 20–30s · night lab · navy jacket ───────── */}
 
-      <Beat id="act-credentials" t0={20.3} t1={20.9} gesture="calm" place={{ kind: 'low' }}>
+      <Beat id="act-credentials" t0={20.3} fx="dots" t1={20.9} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">Away from the keyboard</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
           <Title text="Honors & |diplomacy|" />
@@ -329,14 +334,14 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 21.0–22.35s: points screen-right, fingertip ≈ (73%, 60%) */}
-      <TipBeat t0={21} rise={21.5} lower={22} t1={22.35} gesture="point-right" tips={[{ track: 'lab-right', dir: 'right', node: credentialItem('nyc-mun-2023') }]} />
+      <TipBeat t0={21} fx="focus" rise={21.5} lower={22} t1={22.35} gesture="point-right" tips={[{ track: 'lab-right', dir: 'right', node: credentialItem('nyc-mun-2023') }]} />
 
       {/* 22.9–23.9s: points screen-left, fingertip ≈ (31%, 65%) */}
-      <TipBeat t0={22.7} rise={23} lower={23.75} t1={24.05} gesture="point-left" tips={[{ track: 'lab-left', dir: 'left', node: credentialItem('mun-13-record') }]} />
+      <TipBeat t0={22.7} fx="wipe" rise={23} lower={23.75} t1={24.05} gesture="point-left" tips={[{ track: 'lab-left', dir: 'left', node: credentialItem('mun-13-record') }]} />
 
       {/* 24.4–25.4s: both fingers out */}
       <TipBeat
-        t0={24.45}
+        t0={24.45} fx="dots"
         rise={25}
         lower={25.25}
         t1={25.6}
@@ -348,10 +353,10 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       />
 
       {/* 25.9–26.9s: points up-right, fingertip ≈ (74%, 30%) */}
-      <TipBeat t0={25.75} rise={26.25} lower={26.75} t1={27.05} gesture="point-up" tips={[{ track: 'lab-up', dir: 'up', node: credentialItem('national-hackathons') }]} />
+      <TipBeat t0={25.75} fx="fade" rise={26.25} lower={26.75} t1={27.05} gesture="point-up" tips={[{ track: 'lab-up', dir: 'up', node: credentialItem('national-hackathons') }]} />
 
       {/* 27.2–28.4s: calm — life off-screen and the full honors index */}
-      <Beat t0={27.2} t1={28.4} gesture="calm" place={{ kind: 'low' }}>
+      <Beat t0={27.2} fx="wipe" t1={28.4} gesture="calm" place={{ kind: 'low' }}>
         <p className="cinema-kicker">{BEYOND_PILLARS.map((b) => b.title.split(/[,&]/)[0].trim()).join(' · ')}</p>
         <h2 className="cinema-display-title cinema-scene-title mt-2">
           <Title text="Beyond the |screen|" />
@@ -366,7 +371,7 @@ export const GestureStage: React.FC<GestureStageProps> = ({
       </Beat>
 
       {/* 28.6–30s: final still frame — contact holds to the end */}
-      <Beat id="section-contact" t0={28.6} t1={30} gesture="calm" place={{ kind: 'low' }} holdEnd>
+      <Beat id="section-contact" t0={28.6} fx="focus" t1={30} gesture="calm" place={{ kind: 'low' }} holdEnd>
         <p className="cinema-kicker">Direct contact</p>
         <h2 className="cinema-display-title cinema-hero-title mt-2">
           <Title text="Let’s build something |unforgettable|" />
@@ -388,9 +393,6 @@ export const GestureStage: React.FC<GestureStageProps> = ({
           ))}
         </p>
         <p className="gs-row mt-1">
-          <button type="button" className="cinema-link-action gs-link" onClick={onReplayFromStart}>
-            <RotateCcw size={13} aria-hidden="true" /> Replay with sound
-          </button>
           <button type="button" className="cinema-link-action gs-link" onClick={onBackToTop}>
             <ArrowUp size={13} aria-hidden="true" /> Back to top
           </button>

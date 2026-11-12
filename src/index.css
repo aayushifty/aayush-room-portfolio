@@ -1016,17 +1016,39 @@ dialog.dossier-dialog::backdrop {
 
 }
 
-/* ── In-place dot formation ───────────────────────────────────────────────────────────────────
-   Text forms where it stands out of fine dots and breaks back into dots: two offset dot grids
-   whose dots swell with --beat-a (0..1) until they merge into solid type. Nothing moves.
-   --beat-a is scrubbed by scroll, so a block forms as the hand rises and thins out over the
-   whole time the hand takes to lower. */
+/* ── In-place entrances ───────────────────────────────────────────────────────────────────────
+   Every block appears where it stands; nothing travels. Each beat picks one effect (data-fx),
+   all driven by --beat-a (0..1), which follows the video frame on screen. */
 .gs-beat[data-cinema-beat] {
   opacity: min(1, calc(var(--beat-a, 0) * 5)) !important;
   transition: none;
 }
 
-.gs-beat [data-beat-stage] {
+/* Plain fade */
+.gs-beat[data-fx='fade'] [data-beat-stage] {
+  opacity: var(--beat-a, 1);
+}
+
+/* Focus pull: comes into focus where it stands */
+.gs-beat[data-fx='focus'] [data-beat-stage] {
+  opacity: var(--beat-a, 1);
+  filter: blur(calc((1 - var(--beat-a, 1)) * 16px));
+}
+
+/* Wipe: revealed across the block, starting from the side nearest the finger */
+.gs-beat[data-fx='wipe'] [data-beat-stage] {
+  --edge: calc(var(--beat-a, 1) * 135%);
+  --wipe: linear-gradient(var(--wipe-dir, 90deg), #000 calc(var(--edge) - 35%), transparent var(--edge));
+  -webkit-mask-image: var(--wipe);
+  mask-image: var(--wipe);
+}
+
+.gs-tip[data-text='end'] {
+  --wipe-dir: 270deg;
+}
+
+/* Dots: fine dots swell until they merge into solid type */
+.gs-beat[data-fx='dots'] [data-beat-stage] {
   --dot: var(--beat-a, 1);
   --dots:
     radial-gradient(circle, #000 calc(var(--dot) * 3.8px), transparent calc(var(--dot) * 3.8px + 0.6px)),
@@ -1037,4 +1059,19 @@ dialog.dossier-dialog::backdrop {
   mask-size: 5px 5px, 8px 8px;
   -webkit-mask-position: 0 0, 2px 3px;
   mask-position: 0 0, 2px 3px;
+}
+
+/* Whatever the entrance, a fingertip block leaves the same way: erased from the top down by
+   --drop, the fraction of its fall the hand has completed in the frame on screen. */
+.gs-beat[data-tips][data-beat-side='out'] [data-beat-stage] {
+  --gone: calc(var(--drop, 0) * 135%);
+  --drop: linear-gradient(180deg, transparent calc(var(--gone) - 35%), #000 var(--gone));
+  opacity: 1;
+  filter: none;
+  -webkit-mask-image: var(--drop);
+  mask-image: var(--drop);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
 }

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pause, Volume2 } from 'lucide-react';
 import { CINEMA_CLIPS } from '@/data/portfolio';
 import { NAV_SCROLL_TARGETS } from '@/lib/scrollBeats';
 import { cn } from '@/lib/utils';
@@ -9,8 +8,6 @@ export interface CinemaHUDProps {
   onNavigateSection: (sectionId: string) => void;
   progressBarRef: React.RefObject<HTMLDivElement | null>;
   timecodeRef: React.RefObject<HTMLSpanElement | null>;
-  isAutoPlaying: boolean;
-  onToggleAutoPlay: () => void;
 }
 
 const PRIMARY_NAV_ITEMS = NAV_SCROLL_TARGETS.filter(
@@ -22,8 +19,6 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
   onNavigateSection,
   progressBarRef,
   timecodeRef,
-  isAutoPlaying,
-  onToggleAutoPlay,
 }) => {
   const activeClip = CINEMA_CLIPS[activeAct];
 
@@ -85,29 +80,8 @@ export const CinemaHUD: React.FC<CinemaHUDProps> = ({
             aria-label="Timeline position"
             className="hidden font-mono-tech text-[11px] font-medium tracking-[0.14em] text-slate-300/90 tabular-nums sm:inline-flex [text-shadow:0_2px_10px_rgb(0_0_0/0.85)]"
           >
-            00:00 / 00:20
+            00:00 / 00:30
           </span>
-
-          <button
-            type="button"
-            onClick={onToggleAutoPlay}
-            className={cn(
-              'cinema-link-action min-h-9 font-sans text-xs font-bold tracking-wide transition',
-              isAutoPlaying ? 'text-[#f5c46b]' : 'text-white hover:text-[#f5c46b]'
-            )}
-          >
-            {isAutoPlaying ? (
-              <>
-                <Pause className="h-3.5 w-3.5 text-[#f5c46b]" aria-hidden="true" />
-                <span>Pause</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="h-3.5 w-3.5 text-[#f5c46b]" aria-hidden="true" />
-                <span>Play Reel</span>
-              </>
-            )}
-          </button>
 
           <button
             type="button"
