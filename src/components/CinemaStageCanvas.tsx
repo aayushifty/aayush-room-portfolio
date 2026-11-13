@@ -112,6 +112,18 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           },
           { once: true }
         );
+        // A phone that cannot decode the sharp copy errors instead of firing loadeddata; without
+        // this the held frame stayed up for good and the page looked frozen.
+        video.addEventListener(
+          'error',
+          () => {
+            if (released) return;
+            release();
+            video.src = pickReelUrl();
+            video.load();
+          },
+          { once: true }
+        );
         blobUrl = URL.createObjectURL(hi);
         video.src = blobUrl;
         video.load();
@@ -224,7 +236,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     // Seeks remain for scrolling back, long jumps, and landing on the exact frame at rest.
     const drive = (): void => {
       const ahead = desiredTimeRef.current - video.currentTime;
-      if (!reducedMotionRef.current && video.readyState >= 2 && !video.seeking && ahead > 0.06 && ahead < 4) {
+      if (!reducedMotionRef.current && video.readyState >= 1 && !video.seeking && ahead > 0.06 && ahead < 4) {
         video.playbackRate = Math.min(2.5, Math.max(0.75, ahead * 3));
         if (video.paused) void video.play().catch(flushSeek);
         return;
@@ -346,6 +358,14 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     video.addEventListener('seeked', onSeeked);
     // if the browser pauses playback itself (hidden tab, power saving), still land on the exact frame
     video.addEventListener('pause', flushSeek);
+    // a failed load or decode (memory pressure on phones) would otherwise leave the film frozen
+    let retried = false;
+    const onError = (): void => {
+      if (retried) return;
+      retried = true;
+      window.setTimeout(() => video.load(), 800);
+    };
+    video.addEventListener('error', onError);
 
     revealFallbackTimer = window.setTimeout(() => {
       if (video.readyState >= 2) {
@@ -433,6 +453,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('seeked', onSeeked);
       video.removeEventListener('pause', flushSeek);
+      video.removeEventListener('error', onError);
       if (frameCallbackId) video.cancelVideoFrameCallback(frameCallbackId);
       window.removeEventListener('scroll', scheduleSync);
       window.removeEventListener('resize', scheduleSync);
