@@ -56,7 +56,6 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     let revealFallbackTimer: number | null = null;
     let seekStartedAt = 0;
     let hasFirstFrame = false;
-    let blobUrl: string | null = null;
     const abortCtrl = new AbortController();
 
     video.defaultMuted = true;
@@ -84,7 +83,9 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           settle();
           return;
         }
-        const hi = await res.blob();
+        // Read the whole file so it sits in the HTTP cache, then play it from its own URL. Safari is
+        // unreliable with blob: video, and a phone need not hold a second 12-25 MB copy in memory.
+        await res.arrayBuffer();
         if (abortCtrl.signal.aborted) return;
         const latch = latchRef.current;
         if (latch && video.videoWidth) {
@@ -93,15 +94,15 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           latch.getContext('2d')?.drawImage(video, 0, 0);
           latch.style.opacity = '1';
         }
-        const old = blobUrl;
         let released = false;
         const release = (): void => {
           if (released) return;
           released = true;
           if (latch) latch.style.opacity = '0';
-          if (old) URL.revokeObjectURL(old);
           settle();
         };
+        // whatever the element does, the held frame never outlives 3 s
+        window.setTimeout(release, 3000);
         video.addEventListener(
           'loadeddata',
           () => {
@@ -124,8 +125,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
           },
           { once: true }
         );
-        blobUrl = URL.createObjectURL(hi);
-        video.src = blobUrl;
+        video.src = hiUrl;
         video.load();
       } catch {
         // the light reel keeps playing
@@ -367,6 +367,52 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     };
     video.addEventListener('error', onError);
 
+    // iPhone Safari loads no frames before playback, and refuses automatic playback in Low Power
+    // Mode, so the poster could stay up for good. A tap or the end of a touch scroll is a user
+    // gesture: start playback once there, and the scroll engine takes over from the first frame.
+    const unlock = (): void => {
+      if (video.readyState >= 2) {
+        removeUnlock();
+        return;
+      }
+      void video
+        .play()
+        .then(() => {
+          removeUnlock();
+          drive();
+        })
+        .catch(() => undefined);
+    };
+    const removeUnlock = (): void => {
+      window.removeEventListener('touchend', unlock);
+      window.removeEventListener('click', unlock);
+    };
+    window.addEventListener('touchend', unlock, { passive: true });
+    window.addEventListener('click', unlock);
+
+    // ?debug shows the video's state on screen, for diagnosing a device we cannot test directly
+    const debugEl = new URLSearchParams(window.location.search).has('debug')
+      ? document.body.appendChild(document.createElement('pre'))
+      : null;
+    let debugTimer: number | null = null;
+    if (debugEl) {
+      debugEl.style.cssText =
+        'position:fixed;left:8px;top:64px;z-index:9999;margin:0;padding:8px;max-width:calc(100vw - 16px);white-space:pre-wrap;font:11px/1.35 monospace;color:#0f0;background:rgba(0,0,0,.8);pointer-events:none';
+      debugTimer = window.setInterval(() => {
+        const b = video.buffered;
+        debugEl.textContent = [
+          navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110),
+          `ready ${video.readyState} net ${video.networkState} paused ${video.paused} seeking ${video.seeking}`,
+          `time ${video.currentTime.toFixed(2)} / want ${desiredTimeRef.current.toFixed(2)} / dur ${video.duration.toFixed(1)}`,
+          `size ${video.videoWidth}x${video.videoHeight} buffered ${b.length ? b.end(b.length - 1).toFixed(1) : '-'}s`,
+          `src ${video.currentSrc.split('/').pop()}`,
+          `error ${video.error ? `${video.error.code} ${video.error.message}` : 'none'}`,
+          `video opacity ${video.style.opacity || '-'} poster ${posterImg?.style.display || 'shown'} hold ${latchRef.current?.style.opacity || '-'}`,
+          `upgrade ${upgradeStarted ? 'started' : 'waiting'} scrollY ${Math.round(window.scrollY)}`,
+        ].join('\n');
+      }, 500);
+    }
+
     revealFallbackTimer = window.setTimeout(() => {
       if (video.readyState >= 2) {
         revealVideo();
@@ -458,9 +504,9 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       window.removeEventListener('scroll', scheduleSync);
       window.removeEventListener('resize', scheduleSync);
       window.removeEventListener('pointermove', onPointerMove);
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
+      removeUnlock();
+      if (debugTimer !== null) window.clearInterval(debugTimer);
+      debugEl?.remove();
     };
   }, [reducedMotion, videoRef]);
 
