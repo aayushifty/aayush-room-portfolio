@@ -52,6 +52,7 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     let watchdogTimer: number | null = null;
     let restTimer: number | null = null;
     let upgradeTimer: number | null = null;
+    let readyTimer: number | null = null;
     let revealFallbackTimer: number | null = null;
     let seekStartedAt = 0;
     let hasFirstFrame = false;
@@ -150,7 +151,11 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
     };
     video.addEventListener('progress', onProgress);
     video.addEventListener('suspend', onSuspend);
-    video.addEventListener('loadeddata', onFirstData, { once: true });
+    // The poster already shows the opening frame, so the page is usable once the reel's header is in.
+    // Safari loads no frame data before playback is asked for, so waiting for frames left
+    // "Loading 0%" up indefinitely; the 4 s cap covers a slow header too.
+    video.addEventListener('loadedmetadata', onFirstData, { once: true });
+    readyTimer = window.setTimeout(onFirstData, 4000);
     // some browsers stop buffering a paused video early; upgrade anyway after a while
     upgradeTimer = window.setTimeout(startUpgrade, 30000);
     video.src = pickReelUrl();
@@ -414,7 +419,8 @@ export const CinemaStageCanvas: React.FC<CinemaStageCanvasProps> = ({
       if (upgradeTimer !== null) window.clearTimeout(upgradeTimer);
       video.removeEventListener('progress', onProgress);
       video.removeEventListener('suspend', onSuspend);
-      video.removeEventListener('loadeddata', onFirstData);
+      video.removeEventListener('loadedmetadata', onFirstData);
+      if (readyTimer !== null) window.clearTimeout(readyTimer);
       if (watchdogTimer !== null) window.clearTimeout(watchdogTimer);
       if (restTimer !== null) window.clearTimeout(restTimer);
       if (revealFallbackTimer !== null) window.clearTimeout(revealFallbackTimer);
